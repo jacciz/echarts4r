@@ -4631,92 +4631,70 @@ e_band2.echarts4rProxy <- function(e, lower, upper, ...) {
 
 #' Chord
 #'
-#' Add Chord serie.
+#' Draw a Chord chart.
 #'
 #' @inheritParams e_bar
-#' @param coord_system Coordinate system to plot against.
+#' @param source,target Source and target columns.
+#' @param value Value shared between \code{source} and \code{target}.
+#' @param rm_x,rm_y Whether to remove the x and y axis, defaults to \code{TRUE}.
 #'
 #' @examples
-#' iris |>
-#'   group_by(Species) |>
-#'   e_charts(Sepal.Length) |>
-#'   e_line(Sepal.Width) |>
-#'   e_tooltip(trigger = "axis")
+#' chord_data <- data.frame(
+#'   source = c("a", "b", "c", "d", "c"),
+#'   target = c("b", "c", "d", "e", "e"),
+#'   value = ceiling(rnorm(5, 10, 1)),
+#'   stringsAsFactors = FALSE
+#' )
 #'
-#' # timeline
-#' iris |>
-#'   group_by(Species) |>
-#'   e_charts(Sepal.Length, timeline = TRUE) |>
-#'   e_line(Sepal.Width) |>
-#'   e_tooltip(trigger = "axis")
+#' chord_data |>
+#'   e_charts() |>
+#'   e_chord(source, target, value)
 #' @seealso \href{https://echarts.apache.org/en/option.html#series-chord}{Additional arguments}
 #'
 #' @rdname e_chord
 #' @export
-e_chord <- function(
-    e,
-    serie,
-    bind,
-    name = NULL,
-    legend = TRUE,
-    y_index = 0,
-    x_index = 0,
-    coord_system = "cartesian2d",
-    ...) {
-  UseMethod("e_chord")
-}
+e_chord <- function(e, source, target, value, rm_x = TRUE, rm_y = TRUE, ...) UseMethod("e_chord")
 
 #' @export
 #' @method e_chord echarts4r
-e_chord.echarts4r <- function(
+e_chord.echarts4r <- function(e, source, target, value, rm_x = TRUE, rm_y = TRUE, ...) {
+  if (missing(source) || missing(target) || missing(value)) {
+    stop("missing source, target or values", call. = FALSE)
+  }
+  
+  e <- .rm_axis(e, rm_x, "x")
+  e <- .rm_axis(e, rm_y, "y")
+  
+  e_chord_(
     e,
-    serie,
-    bind,
-    name = NULL,
-    legend = TRUE,
-    y_index = 0,
-    x_index = 0,
-    coord_system = "cartesian2d",
-    ...) {
-  if (missing(serie)) {
-    stop("must pass serie", call. = FALSE)
-  }
-  
-  serie <- deparse(substitute(serie))
-  
-  if (missing(bind)) {
-    bd <- NULL
-  } else {
-    bd <- deparse(substitute(bind))
-  }
-  
-  e_chord_(e, serie, bd, name, legend, y_index, x_index, coord_system, ...)
+    deparse(substitute(source)),
+    deparse(substitute(target)),
+    deparse(substitute(value)),
+    rm_x,
+    rm_y,
+    ...
+  )
 }
 
 #' @export
 #' @method e_chord echarts4rProxy
-e_chord.echarts4rProxy <- function(
-    e,
-    serie,
-    bind,
-    name = NULL,
-    legend = TRUE,
-    y_index = 0,
-    x_index = 0,
-    coord_system = "cartesian2d",
-    ...) {
-  if (missing(serie)) {
-    stop("must pass serie", call. = FALSE)
+e_chord.echarts4rProxy <- function(e, source, target, value, rm_x = TRUE, rm_y = TRUE, ...) {
+  if (missing(source) || missing(target) || missing(value)) {
+    stop("missing source, target or values", call. = FALSE)
   }
   
-  serie <- deparse(substitute(serie))
+  e <- .rm_axis(e, rm_x, "x")
+  e <- .rm_axis(e, rm_y, "y")
   
-  if (missing(bind)) {
-    bd <- NULL
-  } else {
-    bd <- deparse(substitute(bind))
-  }
+  e$chart <- e_chord_(
+    e$chart,
+    deparse(substitute(source)),
+    deparse(substitute(target)),
+    deparse(substitute(value)),
+    rm_x,
+    rm_y,
+    ...
+  )
   
-  e$chart <- e_chord_(e$chart, serie, bd, name, legend, y_index, x_index, coord_system, ...)
   return(e)
 }

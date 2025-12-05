@@ -5,64 +5,36 @@
 \alias{e_chord_}
 \title{Chord}
 \usage{
-e_chord(
-  e,
-  serie,
-  bind,
-  name = NULL,
-  legend = TRUE,
-  y_index = 0,
-  x_index = 0,
-  coord_system = "cartesian2d",
-  ...
-)
+e_chord(e, source, target, value, rm_x = TRUE, rm_y = TRUE, ...)
 
-e_chord_(
-  e,
-  serie,
-  bind = NULL,
-  name = NULL,
-  legend = TRUE,
-  y_index = 0,
-  x_index = 0,
-  coord_system = "none",
-  ...
-)
+e_chord_(e, source, target, value, rm_x = TRUE, rm_y = TRUE, ...)
 }
 \arguments{
 \item{e}{An \code{echarts4r} object as returned by \code{\link{e_charts}} or
 a proxy as returned by \code{\link{echarts4rProxy}}.}
 
-\item{serie}{Column name of serie to plot.}
+\item{source, target}{Source and target columns.}
 
-\item{bind}{Binding between datasets, namely for use of \code{\link{e_brush}}.}
+\item{value}{Value shared between \code{source} and \code{target}.}
 
-\item{name}{name of the serie.}
-
-\item{legend}{Whether to add serie to legend.}
-
-\item{x_index, y_index}{Indexes of x and y axis.}
-
-\item{coord_system}{Coordinate system to plot against.}
+\item{rm_x, rm_y}{Whether to remove the x and y axis, defaults to \code{TRUE}.}
 
 \item{...}{Any other option to pass, check See Also section.}
 }
 \description{
-Add Chord serie.
+Draw a Chord chart.
 }
 \examples{
-iris |>
-  group_by(Species) |>
-  e_charts(Sepal.Length) |>
-  e_line(Sepal.Width) |>
-  e_tooltip(trigger = "axis")
+chord_data <- data.frame(
+  source = c("a", "b", "c", "d", "c"),
+  target = c("b", "c", "d", "e", "e"),
+  value = ceiling(rnorm(5, 10, 1)),
+  stringsAsFactors = FALSE
+)
 
-# timeline
-iris |>
-  group_by(Species) |>
-  e_charts(Sepal.Length, timeline = TRUE) |>
-  e_line(Sepal.Width) |>
-  e_tooltip(trigger = "axis")
+chord_data |>
+  e_charts() |>
+  e_chord(source, target, value)
 }
 \seealso{
 \href{https://echarts.apache.org/en/option.html#series-chord}{Additional arguments}

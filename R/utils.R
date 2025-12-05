@@ -790,3 +790,12 @@ check_installed <- function(pkg) {
     stop(sprintf("This function requires the package {%s}", pkg), call. = FALSE)
   }
 }
+
+.build_zigzags <- function(data, starts, ends, gap) {
+  data |>
+    dplyr::select(starts, ends, gap) -> zigzags
+  
+  names(zigzags) <- c("start", "end", "gap")
+  
+  apply(zigzags, 1, as.list)
+}

@@ -367,3 +367,66 @@ echarts_from_json <- function(txt, jswrapper = FALSE) {
 
   e
 }
+
+#' Axis ZigZags
+#'
+#' helper function for generating axis break zigzags in chart
+#'
+#' @inheritParams e_bar
+#' @param axis Axis to apply formatter to. Supports x and y axis
+#' @param start,end Start and End point for boundary of zigzag. Also supports vectors for generating multiple breaks. Can also support time values.
+#' @param gap Determines the visual size of the axis break area. 
+#' Supports Percentage(String) as proportional value relative to axis. Supports Absolute value(numeric) which refers to literal values in the axis similar to start,end (Not a pixel value).
+#' @param zigzagAmplitude Amplitude of zigzag. Unit is pixels. 
+#' @param ... Any other arguments to pass to breakArea argument.
+#'
+#' @examples
+#' 
+#' df <- data.frame(
+#'               x = c("a", "b", "c", "d", "c"),
+#'               y = c(100, 200, 200, 700, 300)
+#'              )
+#'
+#' df |>
+#'   e_charts(x) |>
+#'   e_bar(y) |>
+#'   e_zigzag(axis = 'y', start = 400, end = 500)
+#'   
+#' df |>
+#'   e_charts(x) |>
+#'   e_bar(y) |>
+#'   e_zigzag(axis = 'y', start = c(125,400), end = c(150,500))   
+#' @seealso \href{https://echarts.apache.org/en/option.html#series-bar}{Additional arguments}  
+#'    
+#' @rdname e_zigzag
+#' @export
+e_zigzag <- function(e, axis = 'y', start, end, gap = "3%", zigzagAmplitude = 10, ...){
+  if (missing(e)) {
+    stop("must pass echart into function", call. = FALSE)
+  }
+  
+  if (missing(axis)) {
+    stop("must indicate which axis to zigzag. e.g. 'x' or 'y'", call. = FALSE)
+  }
+  
+  if (missing(start) | missing(end)) {
+    stop("must provide start and end values")
+  }
+  
+  data <- data.frame("starts" = start, "ends" = end, "gap" = gap)
+  b <- .build_zigzags(data, starts, ends, gap)
+  
+  bA <- list(
+    zigzagAmplitude = zigzagAmplitude,
+    ...
+  )
+  
+  if(axis == 'y'){
+    e <- e |> e_y_axis(breaks = b, breakArea = bA)
+  }
+  
+  if(axis == 'x'){
+    e <- e |> e_x_axis(breaks = b, breakArea = bA)
+  }
+  e
+}
