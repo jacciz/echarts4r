@@ -9,11 +9,12 @@
 e_theme(
   e,
   name = c("auritus", "azul", "bee-inspired", "blue", "caravan", "carp", "chalk", "cool",
-    "dark-blue", "dark-bold", "dark-digerati", "dark-fresh-cut", "dark-mushroom", "dark",
+    "dark", "dark-blue", "dark-bold", "dark-digerati", "dark-fresh-cut", "dark-mushroom",
     "eduardo", "essos", "forest", "fresh-cut", "fruit", "gray", "green", "halloween",
     "helianthus", "infographic", "inspired", "jazz", "london", "macarons", "macarons2",
-    "mint", "purple-passion", "red-velvet", "red", "roma", "royal", "sakura", "shine",
-    "tech-blue", "vintage", "walden", "wef", "weforum", "westeros", "wonderland")
+    "mint", "purple-passion", "rainbow", "red", "red-velvet", "roma", "royal", "sakura",
+    "shine", "tech-blue", "v5", "vintage", "walden", "wef", "weforum", "westeros",
+    "wonderland")
 )
 
 e_theme_custom(e, theme, name = "custom")
