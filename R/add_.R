@@ -2554,3 +2554,114 @@ e_error_bar_ <- function(
   e$dependencies <- append(e$dependencies, list(dep))
   e |> e_x_axis(type = "category") # wont work with type 'value'
 }
+
+
+
+#' @rdname e_chord
+#' @export
+e_chord_ <- function(
+    e,
+    serie,
+    bind = NULL,
+    name = NULL,
+    legend = TRUE,
+    y_index = 0,
+    x_index = 0,
+    coord_system = "none",
+    ...
+) {
+  if (missing(e)) {
+    stop("must pass e", call. = FALSE)
+  }
+  
+  if (missing(serie)) {
+    stop("must pass serie", call. = FALSE)
+  }
+  
+  if (length(e$x$facets)) {
+    x_index <- e$x$facets$current
+    y_index <- e$x$facets$current
+    e$x$facets$current <- e$x$facets$current + 1
+  }
+  
+  for (i in seq_along(e$x$data)) {
+    
+    # build JSON data
+    .build_data2(e$x$data[[i]], e$x$mapping$x, serie) -> vector
+    
+    if (!is.null(bind)) {
+      vector <- .add_bind2(e, vector, bind, i = i)
+    }
+    
+    l <- list(
+      data = vector
+    )
+    
+    if (coord_system == "cartesian2d") {
+      if (y_index != 0) {
+        e <- .set_y_axis(e, serie, y_index, i)
+      }
+      
+      if (x_index != 0) {
+        e <- .set_x_axis(e, x_index, i)
+      }
+      
+      if (!e$x$tl) {
+        l$yAxisIndex <- y_index
+        l$xAxisIndex <- x_index
+      }
+    } else if (coord_system == "polar") {
+      l$data <- e$x$data[[i]] |>
+        dplyr::select(serie) |>
+        unlist() |>
+        unname() |>
+        as.list()
+    }
+    
+    if (!e$x$tl) {
+      nm <- .name_it(e, serie, name, i)
+      
+      opts <- list(
+        name = nm,
+        type = "line",
+        coordinateSystem = coord_system,
+        ...
+      )
+      
+      l <- append(l, opts)
+      
+      if (isTRUE(legend)) {
+        e$x$opts$legend$data <- append(e$x$opts$legend$data, list(nm))
+      }
+      
+      e$x$opts$series <- append(e$x$opts$series, list(l))
+    } else {
+      if (isTRUE(legend)) {
+        e$x$opts$legend$data <- append(e$x$opts$legend$data, list(name))
+      }
+      
+      e$x$opts$options[[i]]$series <- append(e$x$opts$options[[i]]$series, list(l))
+    }
+  }
+  
+  if (isTRUE(e$x$tl)) {
+    if (is.null(name)) name <- serie
+    
+    series_opts <- list(
+      name = name,
+      type = "chord",
+      yAxisIndex = y_index,
+      xAxisIndex = x_index,
+      coordinateSystem = coord_system,
+      ...
+    )
+    
+    if (isTRUE(legend)) {
+      e$x$opts$baseOption$legend$data <- append(e$x$opts$baseOption$legend$data, list(name))
+    }
+    
+    e$x$opts$baseOption$series <- append(e$x$opts$baseOption$series, list(series_opts))
+  }
+  
+  e
+}

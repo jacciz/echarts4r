@@ -4627,3 +4627,96 @@ e_band2.echarts4rProxy <- function(e, lower, upper, ...) {
     ...
   )
 }
+
+
+#' Chord
+#'
+#' Add Chord serie.
+#'
+#' @inheritParams e_bar
+#' @param coord_system Coordinate system to plot against.
+#'
+#' @examples
+#' iris |>
+#'   group_by(Species) |>
+#'   e_charts(Sepal.Length) |>
+#'   e_line(Sepal.Width) |>
+#'   e_tooltip(trigger = "axis")
+#'
+#' # timeline
+#' iris |>
+#'   group_by(Species) |>
+#'   e_charts(Sepal.Length, timeline = TRUE) |>
+#'   e_line(Sepal.Width) |>
+#'   e_tooltip(trigger = "axis")
+#' @seealso \href{https://echarts.apache.org/en/option.html#series-chord}{Additional arguments}
+#'
+#' @rdname e_chord
+#' @export
+e_chord <- function(
+    e,
+    serie,
+    bind,
+    name = NULL,
+    legend = TRUE,
+    y_index = 0,
+    x_index = 0,
+    coord_system = "cartesian2d",
+    ...) {
+  UseMethod("e_chord")
+}
+
+#' @export
+#' @method e_chord echarts4r
+e_chord.echarts4r <- function(
+    e,
+    serie,
+    bind,
+    name = NULL,
+    legend = TRUE,
+    y_index = 0,
+    x_index = 0,
+    coord_system = "cartesian2d",
+    ...) {
+  if (missing(serie)) {
+    stop("must pass serie", call. = FALSE)
+  }
+  
+  serie <- deparse(substitute(serie))
+  
+  if (missing(bind)) {
+    bd <- NULL
+  } else {
+    bd <- deparse(substitute(bind))
+  }
+  
+  e_chord_(e, serie, bd, name, legend, y_index, x_index, coord_system, ...)
+}
+
+#' @export
+#' @method e_chord echarts4rProxy
+e_chord.echarts4rProxy <- function(
+    e,
+    serie,
+    bind,
+    name = NULL,
+    legend = TRUE,
+    y_index = 0,
+    x_index = 0,
+    coord_system = "cartesian2d",
+    ...) {
+  if (missing(serie)) {
+    stop("must pass serie", call. = FALSE)
+  }
+  
+  serie <- deparse(substitute(serie))
+  
+  if (missing(bind)) {
+    bd <- NULL
+  } else {
+    bd <- deparse(substitute(bind))
+  }
+  
+  e$chart <- e_chord_(e$chart, serie, bd, name, legend, y_index, x_index, coord_system, ...)
+  return(e)
+}
