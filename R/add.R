@@ -373,7 +373,8 @@ e_step.echarts4rProxy <- function(
 #' @param rm_x,rm_y Whether to remove x and y axis, only applies if \code{coord_system} is not
 #' set to \code{cartesian2d}.
 #' @param x A vector of integers or numeric.
-#' @param jitter_factor,jitter_amount Jitter points, passed to \code{jitter}.
+#' @param jitter_factor,jitter_amount Jitter points, passed to \code{jitter}. This is now deprecated since the upgrade to echarts v6. 
+#' Recommend using e_jitter().
 #' @param scale_js the JavaScript scaling function.
 #'
 #' @section Scaling function: defaults to \code{e_scale} which is a basic function that rescales \code{size}
