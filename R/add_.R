@@ -38,7 +38,7 @@ e_bar_ <- function(
 
     if (coord_system == "polar") {
       e_serie$data <- e$x$data[[i]] |>
-        dplyr::select(serie) |>
+        dplyr::select(dplyr::all_of(serie)) |>
         unlist() |>
         unname() |>
         as.list()
@@ -150,7 +150,7 @@ e_line_ <- function(
       }
     } else if (coord_system == "polar") {
       l$data <- e$x$data[[i]] |>
-        dplyr::select(serie) |>
+        dplyr::select(dplyr::all_of(serie)) |>
         unlist() |>
         unname() |>
         as.list()
@@ -251,7 +251,7 @@ e_area_ <- function(
       l$xAxisIndex <- x_index
     } else if (coord_system == "polar") {
       l$data <- e$x$data[[i]] |>
-        dplyr::select(serie) |>
+        dplyr::select(dplyr::all_of(serie)) |>
         unlist() |>
         unname() |>
         as.list()
@@ -356,7 +356,7 @@ e_step_ <- function(
       l$xAxisIndex <- x_index
     } else if (coord_system == "polar") {
       l$data <- e$x$data[[i]] |>
-        dplyr::select(serie) |>
+        dplyr::select(dplyr::all_of(serie)) |>
         unlist() |>
         unname() |>
         as.list()
@@ -477,7 +477,7 @@ e_scatter_ <- function(
 
     if (coord_system == "polar") {
       e.serie$data <- e$x$data[[i]] |>
-        dplyr::select(serie) |>
+        dplyr::select(dplyr::all_of(serie)) |>
         unlist() |>
         unname() |>
         as.list()
@@ -610,7 +610,7 @@ e_effect_scatter_ <- function(
 
     if (coord_system == "polar") {
       e.serie$data <- e$x$data[[i]] |>
-        dplyr::select(serie) |>
+        dplyr::select(dplyr::all_of(serie)) |>
         unlist() |>
         unname() |>
         as.list()
@@ -1001,7 +1001,7 @@ e_parallel_ <- function(e, ..., name = NULL, rm_x = TRUE, rm_y = TRUE, opts = li
   e <- .rm_axis(e, rm_y, "y")
 
   e$x$data[[1]] |>
-    dplyr::select(...) -> df
+    dplyr::select(dplyr::all_of(c(...))) -> df
 
   # remove names
   data <- df
@@ -1616,8 +1616,8 @@ e_surface_ <- function(e, y, z, bind = NULL, name = NULL, rm_x = TRUE, rm_y = TR
     row.names(e$x$data[[i]]) <- NULL
 
     data <- e$x$data[[i]] |>
-      dplyr::select(e$x$mapping$x, y, z)
-    
+      dplyr::select(dplyr::all_of(c(e$x$mapping$x, y, z)))
+
     data <- unname(data)
 
     data <- apply(data, 1, as.list)
@@ -2484,10 +2484,10 @@ e_error_bar_ <- function(
     }
     if (coord_system == "polar") {
       e_serie$data <- e$x$data[[i]] |>
-        dplyr::select(
+        dplyr::select(dplyr::all_of(c(
           lower,
           upper
-        ) |>
+        ))) |>
         unlist() |>
         unname() |>
         as.list()
