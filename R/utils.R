@@ -116,7 +116,7 @@ globalVariables(c("x", "e", ".", "acc", "epoch", "loss", "size", "val_acc", "val
   row.names(data) <- NULL
 
   data <- data |>
-    dplyr::select(x = x, y = y) |>
+    dplyr::select(x = {{x}}, y = {{y}}) |>
     dplyr::mutate(
       x = .jitter(x, factor, amount),
       y = .jitter(y, factor, amount)

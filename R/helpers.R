@@ -430,3 +430,52 @@ e_zigzag <- function(e, axis = 'y', start, end, gap = "3%", zigzagAmplitude = 10
   }
   e
 }
+
+
+#' Axis Jitter
+#'
+#' helper function for generating jitter between points in a scatter plot. This is only applicable to e_Scatter().
+#'
+#' @inheritParams e_bar
+#' @param axis Axis to apply formatter to. Supports x and y axis
+#' @param jitter Pixel units indicating the amount of random noise to add to each data point position. 
+#' @param jitterOverlap Boolean allowing overlap between data points. If false, overlap will not be allowed. For some cases, scatters may still overlap if there is no reasonable way to avoid. 
+#' @param jitterMargin When you have jitter and jiterOverlap is FALSE, this is the minimum distance in pixels between two data points.
+#'
+#' @examples
+#' 
+#' df <- data.frame(
+#' value = c(rnorm(50, mean = 5, sd = 1),
+#'          rnorm(50, mean = 10, sd = 1),
+#'          rnorm(50, mean = 15, sd = 1)),
+#'          group = rep(c("Group A", "Group B", "Group C"), each = 50)
+#'           )
+#'
+#' df |> e_charts(group) |> e_scatter(value) |> e_jitter()  
+#' @seealso \href{https://echarts.apache.org/en/option.html#yAxis.jitter}{Additional arguments}  
+#'    
+#' @rdname e_jitter
+#' @export
+e_jitter <- function(e, axis = 'x', jitter = 20, jitterOverlap = FALSE, jitterMargin = 5){
+  if(missing(e)) {
+    stop("must pass echart into function", call. = FALSE)
+  }
+  
+  if(is.null(axis)) {
+    stop("must indicate which axis to apply jitter. e.g. 'x' or 'y'", call. = FALSE)
+  }
+  
+  
+  if(e$x$opts$series[[1]]$type != 'scatter'){
+    stop("jitter is only supported with scatter plots")
+  }
+  
+  if(axis == 'x'){
+    e <- e |> e_x_axis(jitter = jitter, jitterOverlap = jitterOverlap, jitterMargin = jitterMargin)
+  }
+  
+  if(axis == 'y'){
+    e <- e |> e_y_axis(jitter = jitter, jitterOverlap = jitterOverlap, jitterMargin = jitterMargin)
+  }
+  e
+}
