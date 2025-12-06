@@ -127,7 +127,7 @@ renderEcharts4rBox <- function(expr, env = parent.frame(), quoted = FALSE) {
       name = "countup",
       version = "4.9.0",
       src = c(file = path),
-      script = c("echarts-en.min.js")
+      script = c("echarts.min.js")
     )
 
     val$deps <- lapply(
