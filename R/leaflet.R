@@ -41,7 +41,7 @@ e_leaflet <- function(e, roam = TRUE, ...) {
   e$x$opts$leaflet <- leaf
 
   # add dependency
-  path <- system.file("htmlwidgets/lib/echarts-4.8.0/plugins", package = "echarts4r")
+  path <- system.file("htmlwidgets/lib/echarts-6.0.0/plugins", package = "echarts4r")
   dep <- htmltools::htmlDependency(
     name = "echarts-leaflet",
     version = "1.0.0",

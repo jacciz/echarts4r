@@ -73,7 +73,7 @@ e_cloud_ <- function(e, word, freq, color = NULL, rm_x = TRUE, rm_y = TRUE, ...)
   e$x$opts$series <- append(e$x$opts$series, list(serie))
 
   # add dependency
-  path <- system.file("htmlwidgets/lib/echarts-4.8.0/plugins", package = "echarts4r")
+  path <- system.file("htmlwidgets/lib/echarts-6.0.0/plugins", package = "echarts4r")
   dep <- htmltools::htmlDependency(
     name = "echarts-wordcloud",
     version = "1.0.0",
@@ -148,7 +148,7 @@ e_liquid_ <- function(e, serie, color = NULL, rm_x = TRUE, rm_y = TRUE, ...) {
   e$x$opts$series <- append(e$x$opts$series, list(serie))
 
   # add dependency
-  path <- system.file("htmlwidgets/lib/echarts-4.8.0/plugins", package = "echarts4r")
+  path <- system.file("htmlwidgets/lib/echarts-6.0.0/plugins", package = "echarts4r")
   dep <- htmltools::htmlDependency(
     name = "echarts-liquidfill",
     version = "1.0.0",
@@ -211,7 +211,7 @@ e_modularity <- function(e, modularity = TRUE) {
   e$x$opts$series[[length(e$x$opts$series)]]$modularity <- clu
 
   # add dependency
-  path <- system.file("htmlwidgets/lib/echarts-4.8.0/plugins", package = "echarts4r")
+  path <- system.file("htmlwidgets/lib/echarts-6.0.0/plugins", package = "echarts4r")
   dep <- htmltools::htmlDependency(
     name = "echarts-modularity",
     version = "1.0.0",
@@ -221,5 +221,81 @@ e_modularity <- function(e, modularity = TRUE) {
 
   e$dependencies <- append(e$dependencies, list(dep))
 
+  e
+}
+
+
+#' Segmented Doughnut
+#'
+#' Draw segmented doughnut.
+#'
+#' @inheritParams e_bar
+#' @param color Color to plot.
+#' @param rm_x,rm_y Whether to remove x and y axis, defaults to \code{TRUE}.
+#'
+#' @examples
+#' df <- data.frame(val = c(0.6, 0.5, 0.4))
+#'
+#' df |>
+#'   e_charts() |>
+#'   e_liquid(val) |>
+#'   e_theme("dark")
+#' @seealso \href{https://github.com/apache/echarts-custom-series/tree/main/custom-series/segmentedDoughnut}{official documentation}
+#'
+#' @rdname e_doughnut
+#' @export
+e_doughnut <- function(e, serie, color, rm_x = TRUE, rm_y = TRUE, ...) {
+  if (missing(e)) {
+    stop("missing e", call. = FALSE)
+  }
+  
+  if (!missing(color)) {
+    cl <- deparse(substitute(color))
+  } else {
+    cl <- NULL
+  }
+  
+  e_liquid_(e, deparse(substitute(serie)), cl, rm_x, rm_y, ...)
+}
+
+#' @rdname e_doughnut
+#' @export
+e_doughnut_ <- function(e, serie, color = NULL, rm_x = TRUE, rm_y = TRUE, ...) {
+  if (missing(e)) {
+    stop("missing e", call. = FALSE)
+  }
+  
+  e <- .rm_axis(e, rm_x, "x")
+  e <- .rm_axis(e, rm_y, "y")
+  
+  data <- .get_data(e, serie) |>
+    unlist() |>
+    unname()
+  
+  serie <- list(
+    type = "liquidFill",
+    data = data,
+    ...
+  )
+  
+  if (!is.null(color)) {
+    serie$color <- .get_data(e, color) |>
+      unlist() |>
+      unname()
+  }
+  
+  e$x$opts$series <- append(e$x$opts$series, list(serie))
+  
+  # add dependency
+  path <- system.file("htmlwidgets/lib/echarts-6.0.0/plugins", package = "echarts4r")
+  dep <- htmltools::htmlDependency(
+    name = "echarts-liquidfill",
+    version = "1.0.0",
+    src = c(file = path),
+    script = "echarts-liquidfill.min.js"
+  )
+  
+  e$dependencies <- append(e$dependencies, list(dep))
+  
   e
 }

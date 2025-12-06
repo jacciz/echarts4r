@@ -22,7 +22,7 @@ Supports Percentage(String) as proportional value relative to axis. Supports Abs
 \item{...}{Any other arguments to pass to breakArea argument.}
 }
 \description{
-helper function for generating zigzags in chart
+helper function for generating axis break zigzags in chart
 }
 \examples{
 
