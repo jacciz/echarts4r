@@ -2,20 +2,33 @@
 % Please edit documentation in R/plugins.R
 \name{e_doughnut}
 \alias{e_doughnut}
-\alias{e_doughnut_}
 \title{Segmented Doughnut}
 \usage{
-e_doughnut(e, serie, color, rm_x = TRUE, rm_y = TRUE, ...)
-
-e_doughnut_(e, serie, color = NULL, rm_x = TRUE, rm_y = TRUE, ...)
+e_doughnut(
+  e,
+  numerator = NULL,
+  denominator = NULL,
+  formatter = "{c}/{b}",
+  fontSize = "10em",
+  fontColor = "#555",
+  center = c("50\%", "50\%"),
+  radius = c("50\%", "65\%"),
+  rm_x = TRUE,
+  rm_y = TRUE,
+  ...
+)
 }
 \arguments{
 \item{e}{An \code{echarts4r} object as returned by \code{\link{e_charts}} or
 a proxy as returned by \code{\link{echarts4rProxy}}.}
 
-\item{serie}{Column name of serie to plot.}
+\item{numerator, denominator}{numeraetor to provide filled segments and denominator for total segments.}
 
-\item{color}{Color to plot.}
+\item{formatter}{javascript string formatter for center text of chart.}
+
+\item{fontSize, fontColor}{font values for center text of chart.}
+
+\item{center, radius}{center provides relative position of the center of chart while radius provides the radius of your circle for outer segments.}
 
 \item{rm_x, rm_y}{Whether to remove x and y axis, defaults to \code{TRUE}.}
 
@@ -25,12 +38,10 @@ a proxy as returned by \code{\link{echarts4rProxy}}.}
 Draw segmented doughnut.
 }
 \examples{
-df <- data.frame(val = c(0.6, 0.5, 0.4))
 
-df |>
-  e_charts() |>
-  e_liquid(val) |>
-  e_theme("dark")
+
+e_chart() |> e_doughnut(numerator = 3, denominator = 6)
+
 }
 \seealso{
 \href{https://github.com/apache/echarts-custom-series/tree/main/custom-series/segmentedDoughnut}{official documentation}

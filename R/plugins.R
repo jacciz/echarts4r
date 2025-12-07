@@ -230,37 +230,33 @@ e_modularity <- function(e, modularity = TRUE) {
 #' Draw segmented doughnut.
 #'
 #' @inheritParams e_bar
-#' @param color Color to plot.
+#' @param numerator,denominator numeraetor to provide filled segments and denominator for total segments.
+#' @param formatter javascript string formatter for center text of chart.
+#' @param fontSize,fontColor font values for center text of chart.
+#' @param center,radius center provides relative position of the center of chart while radius provides the radius of your circle for outer segments.
 #' @param rm_x,rm_y Whether to remove x and y axis, defaults to \code{TRUE}.
 #'
 #' @examples
-#' df <- data.frame(val = c(0.6, 0.5, 0.4))
+#' 
 #'
-#' df |>
-#'   e_charts() |>
-#'   e_liquid(val) |>
-#'   e_theme("dark")
+#' e_chart() |> e_doughnut(numerator = 3, denominator = 6)
+#' 
 #' @seealso \href{https://github.com/apache/echarts-custom-series/tree/main/custom-series/segmentedDoughnut}{official documentation}
 #'
 #' @rdname e_doughnut
 #' @export
-e_doughnut <- function(e, serie, color, rm_x = TRUE, rm_y = TRUE, ...) {
-  if (missing(e)) {
-    stop("missing e", call. = FALSE)
-  }
+e_doughnut <- function(e, 
+                        numerator = NULL, 
+                        denominator = NULL,
+                        formatter = "{c}/{b}",
+                        fontSize = "10em",
+                        fontColor = "#555",
+                        center = c("50%","50%"), 
+                        radius = c("50%","65%"), 
+                        rm_x = TRUE, 
+                        rm_y = TRUE, 
+                        ...) {
   
-  if (!missing(color)) {
-    cl <- deparse(substitute(color))
-  } else {
-    cl <- NULL
-  }
-  
-  e_liquid_(e, deparse(substitute(serie)), cl, rm_x, rm_y, ...)
-}
-
-#' @rdname e_doughnut
-#' @export
-e_doughnut_ <- function(e, serie, color = NULL, rm_x = TRUE, rm_y = TRUE, ...) {
   if (missing(e)) {
     stop("missing e", call. = FALSE)
   }
@@ -268,32 +264,33 @@ e_doughnut_ <- function(e, serie, color = NULL, rm_x = TRUE, rm_y = TRUE, ...) {
   e <- .rm_axis(e, rm_x, "x")
   e <- .rm_axis(e, rm_y, "y")
   
-  data <- .get_data(e, serie) |>
-    unlist() |>
-    unname()
-  
   serie <- list(
-    type = "liquidFill",
-    data = data,
+    type = "custom",
+    renderItem = htmlwidgets::JS("renderItem"),
+    coordinateSystem = "none",
+    itemPayload = list(center = as.list(center),
+                       radius = as.list(radius),
+                       segmentCount = denominator, 
+                       label = list(
+                         show = TRUE,
+                         formatter = formatter,
+                         fontSize = fontSize,
+                         color = fontColor
+                       )
+    ),
+    data = list(numerator),
     ...
   )
-  
-  if (!is.null(color)) {
-    serie$color <- .get_data(e, color) |>
-      unlist() |>
-      unname()
-  }
   
   e$x$opts$series <- append(e$x$opts$series, list(serie))
   
   # add dependency
   path <- system.file("htmlwidgets/lib/echarts-6.0.0/plugins", package = "echarts4r")
   dep <- htmltools::htmlDependency(
-    name = "echarts-liquidfill",
+    name = "echarts-doughnut",
     version = "1.0.0",
     src = c(file = path),
-    script = "echarts-liquidfill.min.js"
-  )
+    script = "echarts-doughnut.js")
   
   e$dependencies <- append(e$dependencies, list(dep))
   
