@@ -307,7 +307,7 @@ e_doughnut <- function(e,
 #'
 #' @examples
 #'
-e_chart() |> e_violin(data = iris, x =  "Species", y = "Sepal.Length", list(color = "red")) |> e_jitter( jitter = 100)
+# e_chart() |> e_violin(data = iris, x =  "Species", y = "Sepal.Length", list(color = "red")) |> e_jitter( jitter = 100)
 #'
 #' @seealso \href{https://github.com/apache/echarts-custom-series/tree/main/custom-series/segmentedDoughnut}{official documentation}
 #'
@@ -351,30 +351,27 @@ e_violin <- function(e,
   # Add tooltip
   e$x$opts$tooltip <- list(show = TRUE)
 
-  serie <- list(
-    list(
-      type = "custom",
-      renderItem = 'violin',
-      colorBy = 'item',
-      # TODO put these in an arg
-      silent = TRUE,
-      itemPayload = list(
-        symbolSize = 4, # size
-        areaOpacity = 0.6,
-        bandWidthScale = 1.5
-      )
-    ),
-    list(
-      type = "scatter",
-      encode = list(x = 0, y = 1),
-      colorBy = 'item',
-      silent = TRUE,
-      symbolSize = 6
-    ),
-    ...
-  )
+  violin <-    list(
+    type = "custom",
+    renderItem = 'violin',
+    colorBy = 'item', # c(item, series) if series, makes it all violins one color
+    # TODO put these in an arg
+    silent = TRUE,
+    itemPayload = list(
+      symbolSize = 4, # size
+      areaOpacity = 0.6,
+      bandWidthScale = 1.5
+    ))
 
-  e$x$opts$series <- serie
+    scatter <- list(
+      type = "scatter",
+      encode = list(x = 0, y = 1), # i dont know
+      colorBy = 'item',
+      silent = TRUE, # tooltip
+      symbolSize = 6
+    )
+
+  e$x$opts$series <- list(violin, scatter)
 
   # add dependency
   path <- system.file("htmlwidgets/lib/echarts-6.0.0/plugins", package = "echarts4r")
