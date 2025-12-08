@@ -237,40 +237,40 @@ e_modularity <- function(e, modularity = TRUE) {
 #' @param rm_x,rm_y Whether to remove x and y axis, defaults to \code{TRUE}.
 #'
 #' @examples
-#' 
+#'
 #'
 #' e_chart() |> e_doughnut(numerator = 3, denominator = 6)
-#' 
+#'
 #' @seealso \href{https://github.com/apache/echarts-custom-series/tree/main/custom-series/segmentedDoughnut}{official documentation}
 #'
 #' @rdname e_doughnut
 #' @export
-e_doughnut <- function(e, 
-                        numerator = NULL, 
+e_doughnut <- function(e,
+                        numerator = NULL,
                         denominator = NULL,
                         formatter = "{c}/{b}",
                         fontSize = "10em",
                         fontColor = "#555",
-                        center = c("50%","50%"), 
-                        radius = c("50%","65%"), 
-                        rm_x = TRUE, 
-                        rm_y = TRUE, 
+                        center = c("50%","50%"),
+                        radius = c("50%","65%"),
+                        rm_x = TRUE,
+                        rm_y = TRUE,
                         ...) {
-  
+
   if (missing(e)) {
     stop("missing e", call. = FALSE)
   }
-  
+
   e <- .rm_axis(e, rm_x, "x")
   e <- .rm_axis(e, rm_y, "y")
-  
+
   serie <- list(
     type = "custom",
     renderItem = htmlwidgets::JS("renderItem"),
     coordinateSystem = "none",
     itemPayload = list(center = as.list(center),
                        radius = as.list(radius),
-                       segmentCount = denominator, 
+                       segmentCount = denominator,
                        label = list(
                          show = TRUE,
                          formatter = formatter,
@@ -281,9 +281,9 @@ e_doughnut <- function(e,
     data = list(numerator),
     ...
   )
-  
+
   e$x$opts$series <- append(e$x$opts$series, list(serie))
-  
+
   # add dependency
   path <- system.file("htmlwidgets/lib/echarts-6.0.0/plugins", package = "echarts4r")
   dep <- htmltools::htmlDependency(
@@ -291,8 +291,100 @@ e_doughnut <- function(e,
     version = "1.0.0",
     src = c(file = path),
     script = "echarts-doughnut.js")
-  
+
   e$dependencies <- append(e$dependencies, list(dep))
-  
+
+  e
+}
+
+###
+
+#' Segmented Doughnut
+#'
+#' Draw segmented doughnut.
+#'
+#' @inheritParams e_jitter
+#'
+#' @examples
+#'
+e_chart() |> e_violin(data = iris, x =  "Species", y = "Sepal.Length", list(color = "red")) |> e_jitter( jitter = 100)
+#'
+#' @seealso \href{https://github.com/apache/echarts-custom-series/tree/main/custom-series/segmentedDoughnut}{official documentation}
+#'
+#' @rdname e_violin
+#' @export
+e_violin <- function(e,
+                     # serie,
+                     data,
+                     x,
+                     y,
+                     # name, legend, color,
+                       ...) {
+
+  if (missing(e)) {
+    stop("missing e", call. = FALSE)
+  }
+# TODO e_jitter, e_scatter and See Also, echarts4rBox for x, y
+  e <- e_chart()
+  # data = iris
+  # x="Species"
+  # y = "Sepal.Length"
+
+   # .build_data2(data, {{ x }}, {{ y }})
+
+  xData = data[[x]]
+  # Get unique values for x-axis
+  xData <- unique(data[[x]]) |> as.character()
+
+  # Create dataSource with header
+  dataSource <- list(c(x, y))  # Start with header row
+
+  # Add all data points
+  for (i in 1:nrow(data)) {
+    dataSource <- append(dataSource, list(c(as.character(data[[x]][i]), data[[y]][i])))
+  }
+
+  e$x$opts$xAxis = list( type= 'category')
+
+  e$x$opts$dataset <- list(source = dataSource)
+
+  # Add tooltip
+  e$x$opts$tooltip <- list(show = TRUE)
+
+  serie <- list(
+    list(
+      type = "custom",
+      renderItem = 'violin',
+      colorBy = 'item',
+      # TODO put these in an arg
+      silent = TRUE,
+      itemPayload = list(
+        symbolSize = 4, # size
+        areaOpacity = 0.6,
+        bandWidthScale = 1.5
+      )
+    ),
+    list(
+      type = "scatter",
+      encode = list(x = 0, y = 1),
+      colorBy = 'item',
+      silent = TRUE,
+      symbolSize = 6
+    ),
+    ...
+  )
+
+  e$x$opts$series <- serie
+
+  # add dependency
+  path <- system.file("htmlwidgets/lib/echarts-6.0.0/plugins", package = "echarts4r")
+  dep <- htmltools::htmlDependency(
+    name = "echarts-violin",
+    version = "1.0.0",
+    src = c(file = path),
+    script = "echarts-violin.js")
+
+  e$dependencies <- append(e$dependencies, list(dep))
+
   e
 }
