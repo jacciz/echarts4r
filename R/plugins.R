@@ -224,6 +224,7 @@ e_modularity <- function(e, modularity = TRUE) {
   e
 }
 
+# TODO do we want to use snake_case to be consistent?
 
 #' Segmented Doughnut
 #'
@@ -296,41 +297,49 @@ e_doughnut <- function(e,
 
   e
 }
-
-###
-
-#' Segmented Doughnut
+# TODO document more
+#' Violin chart
 #'
-#' Draw segmented doughnut.
+#' Draw a violin chart with scattered.
 #'
-#' @inheritParams e_jitter
-#'
-#' @examples
-#'
-# e_chart() |> e_violin(data = iris, x =  "Species", y = "Sepal.Length", list(color = "red")) |> e_jitter( jitter = 100)
+#' @param e
+#' @param data
+#' @param x
+#' @param y
+#' @param show_scatter TRUE/FALSE to show scatter dots
+#' @param violin_color violin color
+#' @param scatter_color scatter color
+#' @param scatter_size size of scatter dots
+#' @param violin_opacity opacity of the violin, between 0-1.
+#' @param bin_count Count of bins the data is divided into when calculating the distribution.
+#' @param bandwidth_scale smoothness of the violin's shape by adjusting the kernel density estimation (KDE) bandwidth. A higher value smoothes the shape.
+#' @param ...
 #'
 #' @seealso \href{https://github.com/apache/echarts-custom-series/tree/main/custom-series/segmentedDoughnut}{official documentation}
 #'
 #' @rdname e_violin
 #' @export
+#' @examples
+#' e_chart() |> e_violin(data = iris, x =  "Species", y = "Sepal.Length") |> e_jitter(jitter = 100)
+#'
 e_violin <- function(e,
-                     # serie,
                      data,
                      x,
                      y,
-                     # name, legend, color,
+                     show_scatter = TRUE,
+                     violin_color = NULL,
+                     scatter_color = NULL,
+                     symbol_size = 6,
+                     area_opacity = 0.8,
+                     bin_count = 20,
+                     bandwidth_scale = 1.5,
                        ...) {
 
   if (missing(e)) {
     stop("missing e", call. = FALSE)
   }
-# TODO e_jitter, e_scatter and See Also, echarts4rBox for x, y
-  e <- e_chart()
-  # data = iris
-  # x="Species"
-  # y = "Sepal.Length"
 
-   # .build_data2(data, {{ x }}, {{ y }})
+  e <- e_chart()
 
   xData = data[[x]]
   # Get unique values for x-axis
@@ -344,32 +353,34 @@ e_violin <- function(e,
     dataSource <- append(dataSource, list(c(as.character(data[[x]][i]), data[[y]][i])))
   }
 
-  e$x$opts$xAxis = list( type= 'category')
+  e$x$opts$xAxis = list(type = 'category')
 
   e$x$opts$dataset <- list(source = dataSource)
 
-  # Add tooltip
-  e$x$opts$tooltip <- list(show = TRUE)
-
-  violin <-    list(
+  violin <- list(
+    color = violin_color,
     type = "custom",
     renderItem = 'violin',
-    colorBy = 'item', # c(item, series) if series, makes it all violins one color
-    # TODO put these in an arg
+    colorBy = 'item',
+
     silent = TRUE,
     itemPayload = list(
-      symbolSize = 4, # size
-      areaOpacity = 0.6,
-      bandWidthScale = 1.5
+      areaOpacity = violin_opacity,
+      binCount = bin_count,
+      bandWidthScale = bandwidth_scale
     ))
 
+  if(show_scatter){
+
     scatter <- list(
+      color = scatter_color,
       type = "scatter",
-      encode = list(x = 0, y = 1), # i dont know
       colorBy = 'item',
-      silent = TRUE, # tooltip
-      symbolSize = 6
-    )
+      silent = TRUE,
+      symbolSize = scatter_size
+    )} else {
+    scatter <- NULL
+    }
 
   e$x$opts$series <- list(violin, scatter)
 
