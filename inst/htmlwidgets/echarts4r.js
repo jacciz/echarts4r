@@ -74,6 +74,89 @@ HTMLWidgets.widget({
         if(x.draw === true)
           chart.setOption(opts);
 
+  // ── ADD CROSSTALK BLOCK RIGHT AFTER setOption ──────────────────────
+        if (x.crosstalk_group) {
+          var ctSel    = new crosstalk.SelectionHandle(x.crosstalk_group);
+          var ctFilter = new crosstalk.FilterHandle(x.crosstalk_group);
+           var _x = x;
+
+            // cache original data for both timeline and non-timeline
+          var isTimeline = x.tl;
+
+          var originalOptions = isTimeline
+            ? JSON.parse(JSON.stringify(x.opts.options))  // [{series:[...]}, {series:[...]}, ...]
+            : JSON.parse(JSON.stringify(x.opts.series));  // [{data:[...]}, ...]
+
+          // safely get the source data
+          var rawSeries  = isTimeline
+            ? (x.opts && x.opts.options)
+            : (x.opts && x.opts.series);
+
+          var originalOptions = JSON.parse(JSON.stringify(rawSeries));
+
+
+                  // Outbound: broadcast clicks to other widgets
+                  chart.on("click", function(params) {
+                    var key = params.data && params.data.ct_key;
+                    if (key) ctSel.set([key]);
+                  });
+
+                  // Clear selection when clicking blank canvas
+                  chart.getZr().on("click", function(e) {
+                    if (!e.target) ctSel.set([]);
+                  });
+
+                  // Inbound: receive selections from other widgets
+          ctSel.on("change", function(e) {
+            var keys = e.value;
+
+            if (isTimeline) {
+              originalOptions.forEach(function(opt, oi) {
+                if (!opt.series) return;
+                opt.series.forEach(function(s, si) {
+                  var newData = s.data.map(function(d) {
+                    if (!keys || keys.length === 0) return d;
+                    return keys.indexOf(d.ct_key) > -1 ? d : null;
+                  });
+                  var update = { options: [] };
+                  // pad the array up to oi with empty objects
+                  for (var p = 0; p < oi; p++) update.options.push({});
+                  update.options.push({ series: [{ data: newData }] });
+                  chart.setOption(update, false);
+                });
+              });
+            } else {
+              originalOptions.forEach(function(s, si) {
+                var newData = s.data.map(function(d) {
+                  if (!keys || keys.length === 0) return d;
+                  return keys.indexOf(d.ct_key) > -1 ? d : null;
+                });
+                chart.setOption({ series: [{ data: newData }] }, false);
+              });
+            }
+          });
+
+        // outbound: chart click → broadcast selection
+        chart.on("click", function(params) {
+          var key = params.data && params.data.ct_key;
+          if (key) ctSel.set([key]);
+        });
+
+        chart.getZr().on("click", function(e) {
+          if (!e.target) ctSel.set([]);
+        });
+          // Inbound: receive filter changes (filter_select, filter_slider etc.)
+          ctFilter.on("change", function(e) {
+            var keys = e.value;
+            _x.opts.series.forEach(function(s, si) {
+              var filtered = keys
+                ? s.data.map(function(d) { return keys.indexOf(d.ct_key) > -1 ? d : null; })
+                : s.data;
+              chart.setOption({ series: [{ data: filtered }] }, false);
+            });
+          });
+        }
+        // ── END CROSSTALK BLOCK ────────────────────────────────────────────
         // shiny callbacks
         if (HTMLWidgets.shinyMode) {
 

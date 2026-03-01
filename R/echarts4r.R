@@ -118,6 +118,27 @@ e_charts.default <- function(
     xmap <- deparse(substitute(x))
   }
 
+  # Crosstalk
+  ct_key   <- NULL
+  ct_group <- NULL
+  if (!missing(data) && crosstalk::is.SharedData(data)) {
+    ct_key   <- data$key()
+    ct_group <- data$groupName()
+
+    # origData() returns wrong thing on grouped SharedData
+    # get the full data by ungrouping first
+    dat <- dplyr::ungroup(data$origData())
+
+    cat("dat nrow after ungroup:", nrow(dat), "\n")  # should be 150
+
+    # reapply the grouping
+    grp_vars <- dplyr::group_vars(data$origData())
+    if (length(grp_vars) > 0) {
+      dat <- dplyr::group_by(dat, dplyr::across(dplyr::all_of(grp_vars)))
+    }
+    data <- dat
+  }
+
   # forward options using x
   x <- list(
     theme = "",
@@ -127,6 +148,9 @@ e_charts.default <- function(
     mapping = list(),
     events = list(),
     buttons = list(),
+    # ── 2. Store crosstalk metadata on x so JS + serie functions can read it ─
+    crosstalk_key   = ct_key,
+    crosstalk_group = ct_group,
     opts = list(
       ...,
       yAxis = list(
@@ -144,7 +168,25 @@ e_charts.default <- function(
 
     x$data <- map_grps_(data, timeline)
   }
+  # then attach keys to each split group
+  if (!is.null(ct_key) & isFALSE(timeline)) {
+    x$data <- lapply(x$data, function(grp) {
+      # match rows back to original data to get correct keys
+      grp$.ct_key <- ct_key[as.integer(rownames(grp))]
+      grp
+    })
+  }
 
+if (!is.null(ct_key) & isTRUE(timeline)) {
+  x$data <- setNames(
+    lapply(seq_along(x$data), function(i) {
+      grp <- x$data[[i]]
+      grp$.ct_key <- ct_key[[i]]
+      grp
+    }),
+    names(x$data)  # preserve original names
+  )
+}
   if (!is.null(xmap)) {
     x$mapping$x <- xmap[1]
     x$mapping$x_class <- class(data[[xmap]])
@@ -221,6 +263,7 @@ e_charts.default <- function(
     package = "echarts4r",
     elementId = elementId,
     preRenderHook = echarts_build,
+    dependencies = if (!is.null(ct_group)) crosstalk::crosstalkLibs() else NULL,
     sizingPolicy = htmlwidgets::sizingPolicy(
       defaultWidth = "100%",
       knitr.figure = FALSE,
