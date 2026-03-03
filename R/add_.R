@@ -19,10 +19,6 @@ e_bar_ <- function(
     stop("must pass serie", call. = FALSE)
   }
 
-  # pull crosstalk info stored by e_charts()
-  # ct_keys  <- e$x$crosstalk_key
-  # ct_group <- e$x$crosstalk_group
-
   for (i in seq_along(e$x$data)) {
     vector <- .build_data2(e$x$data[[i]], e$x$mapping$x, serie)
 
@@ -30,7 +26,7 @@ e_bar_ <- function(
       vector <- .add_bind2(e, vector, bind, i = i)
     }
 
-    # ── attach ct_key from the column added in e_charts() ───────────────────
+    # Attach keys for crosstalk
     ct_keys_i <- if (".ct_key" %in% names(e$x$data[[i]])) {
       e$x$data[[i]][[".ct_key"]]
     } else NULL

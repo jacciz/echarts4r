@@ -108,24 +108,28 @@ HTMLWidgets.widget({
 
                   // Inbound: receive selections from other widgets
           ctSel.on("change", function(e) {
+              console.log("received keys:", e.value);
+  console.log("series data:", JSON.stringify(chart.getOption().series[0].data));
             var keys = e.value;
 
             if (isTimeline) {
-              originalOptions.forEach(function(opt, oi) {
-                if (!opt.series) return;
-                opt.series.forEach(function(s, si) {
-                  var newData = s.data.map(function(d) {
-                    if (!keys || keys.length === 0) return d;
-                    return keys.indexOf(d.ct_key) > -1 ? d : null;
-                  });
-                  var update = { options: [] };
-                  // pad the array up to oi with empty objects
-                  for (var p = 0; p < oi; p++) update.options.push({});
-                  update.options.push({ series: [{ data: newData }] });
-                  chart.setOption(update, false);
-                });
-              });
+                 // find which frame index matches the selected key
+    originalOptions.forEach(function(opt, oi) {
+      if (!opt.series) return;
+      opt.series.forEach(function(s) {
+        s.data.forEach(function(d) {
+          if (d && keys.indexOf(d.ct_key) > -1) {
+            // navigate timeline to this frame
+            chart.dispatchAction({
+              type: "timelineChange",
+              currentIndex: oi
+            });
+          }
+        });
+      });
+    });
             } else {
+              // non-timeline -
               originalOptions.forEach(function(s, si) {
                 var newData = s.data.map(function(d) {
                   if (!keys || keys.length === 0) return d;
@@ -138,10 +142,10 @@ HTMLWidgets.widget({
 
         // outbound: chart click → broadcast selection
         chart.on("click", function(params) {
-          var key = params.data && params.data.ct_key;
-          if (key) ctSel.set([key]);
-        });
-
+        var key = params.data && params.data.ct_key;
+        console.log("clicked key:", key);
+        if (key) ctSel.set([key]);
+      });
         chart.getZr().on("click", function(e) {
           if (!e.target) ctSel.set([]);
         });
