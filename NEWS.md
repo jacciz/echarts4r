@@ -1,3 +1,7 @@
+# echarts4r 0.5.1
+
+- Added crosstalk capability to `e_bar()`
+
 # echarts4r 0.5.0
 
 - Added new chart types: `e_doughnut()`, `e_violin()`, `e_barRange()`, `e_contour()`, `e_lineRange()`, `e_stage()`, `e_chord()`

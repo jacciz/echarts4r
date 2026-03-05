@@ -122,25 +122,31 @@ e_charts.default <- function(
   ct_key   <- NULL
   ct_group <- NULL
   isGroupedData <- NULL
-
+  isCrosstalk <- FALSE
   if (!missing(data) && crosstalk::is.SharedData(data)) {
-    ct_key   <- data$key()
+    ct_key   <- data$key() |> as.character()
     ct_group <- data$groupName()
+
+    isCrosstalk =TRUE
 
     # origData() returns wrong thing on grouped SharedData
     # get the full data by ungrouping first
-    dat <- dplyr::ungroup(data$origData())
-
-    isGroupedData <- dplyr::is.grouped_df(data$origData())
-
-    # reapply the grouping
-    grp_vars <- dplyr::group_vars(data$origData())
-    if (length(grp_vars) > 0) {
-      dat <- dplyr::group_by(dat, dplyr::across(dplyr::all_of(grp_vars)))
-    }
-    data <- dat
+    data <- (data$origData())
+    data$XkeyX <- ct_key  # add key column
+    isGroupedData <- dplyr::is.grouped_df(data)
+    #
+    # # reapply the grouping
+    # grp_vars <- dplyr::group_vars(data$origData())
+    # if (length(grp_vars) > 0) {
+    #   dat <- dplyr::group_by(dat, dplyr::across(dplyr::all_of(grp_vars)))
+    # }
   }
 
+  # if (xtKey=='XkeyX') data$XkeyX <- ct_key
+  # if (length(colnames(df)) == 1 && !dplyr::is.grouped_df(data))
+  #   data <- data |> dplyr::mutate(duplicate= 1:nrow(data))
+  # lenv$coNames <- ''
+  # lenv$coNames <- colnames(data)
 
   # forward options using x
   x <- list(
@@ -152,8 +158,10 @@ e_charts.default <- function(
     events = list(),
     buttons = list(),
     # ── 2. Store crosstalk metadata on x so JS + serie functions can read it ─
-    crosstalk_key   = ct_key,
-    crosstalk_group = ct_group,
+    settings = list(
+      crosstalk_key   = ct_key,
+      crosstalk_group = ct_group
+    ),
     opts = list(
       ...,
       yAxis = list(
@@ -174,23 +182,84 @@ e_charts.default <- function(
 
   # Add keys for crosstalk - behaves different if timeline and if grouped data
   # then attach keys to each split group
-  if (!is.null(ct_key) & isFALSE(isGroupedData)) {
-    x$data <- lapply(x$data, function(grp) {
-      # match rows back to original data to get correct keys
-      grp$.ct_key <- ct_key[as.integer(rownames(grp))]
-      grp
+#   if (!is.null(ct_key) & isFALSE(isGroupedData)) {
+#     x$data <- lapply(x$data, function(grp) {
+#       # match rows back to original data to get correct keys
+#       grp$.ct_key <- ct_key[as.integer(rownames(grp))]
+#       grp
+#     })
+#   }
+#
+# # For grouped data
+#   if (!is.null(ct_key) & isTRUE(isGroupedData)) {
+#     x$data <- setNames(
+#       lapply(seq_along(x$data), function(i) {
+#         grp <- x$data[[i]]
+#         idx <- as.integer(rownames(grp))
+#         cat("group", i, "idx:", head(idx), "\n")  # debug
+#         grp$.ct_key <- ct_key[idx]
+#         grp
+#       }),
+#       names(x$data)  # preserve original names for each group
+#     )
+#   }
+  # e$opts$dataset[[1]]$source$XkeyX
+  if (!is.null(ct_group) & isTRUE(isGroupedData)) {
+    flat_data <- dplyr::ungroup(data)
+    grp_var   <- if (dplyr::is_grouped_df(data)) dplyr::group_vars(data)[1] else NULL
+
+    source_data <- lapply(seq_len(nrow(flat_data)), function(i) {
+      as.list(flat_data[i, , drop = FALSE])
     })
+    x$crosstalk_grpvar <- grp_var
+    grp_vals <- as.character(unique(flat_data[[grp_var]]))
+
+    grp_transforms <- lapply(grp_vals, function(g) {
+      list(
+        id = paste0("Xtalk_", g),
+        fromDatasetIndex = 0,
+        transform = list(
+          # filter by group first, then by crosstalk key
+          list(type = "filter", config = list(dimension = grp_var, `=` = g)),
+          list(type = "filter", config = list(dimension = "XkeyX", reg = "^"))
+        )
+      )
+    })
+
+    x$opts$dataset <- c(
+      list(list(id = "source", dimensions = colnames(flat_data), source = source_data)),
+      grp_transforms
+    )
   }
 
-# For grouped data
-  if (!is.null(ct_key) & isTRUE(isGroupedData)) {
-    x$data <- setNames(
-      lapply(seq_along(x$data), function(i) {
-        grp <- x$data[[i]]
-        grp$.ct_key <- ct_key[[i]]
-        grp
-      }),
-      names(x$data)  # preserve original names for each group
+  # after building x$opts, add the dataset + Xtalk transform
+  if (!is.null(ct_group) & isFALSE(isGroupedData)) {
+    # x$opts$dataset <- list(
+    #   list(dimensions = colnames(data), source = as.list(data)),
+    #   list(id = 'Xtalk', transform = list(
+    #     type = 'filter',
+    #     config = list(dimension = 'XkeyX', reg = '^')
+    #   ))
+    # )
+    # convert data frame to list of rows
+    source_data <- lapply(seq_len(nrow(data)), function(i) {
+      as.list(data[i, , drop = FALSE])
+    })
+
+    x$opts$dataset <- list(
+      list(
+        id = "source",
+        dimensions = colnames(data),
+        source = source_data
+      ),
+      list(
+        id = "Xtalk",
+        fromDatasetId = "source",
+        transform = list(
+          type = "filter",
+          config = list(dimension = "XkeyX", reg = "^")
+        )
+      )
     )
   }
 # browser()
@@ -286,7 +355,20 @@ e_charts.default <- function(
       padding = 0
     )
   )
-
+  #
+  # if (isCrosstalk) {  # add transformation filter
+  #   tmp <- list(list(
+  #     id= 'Xtalk',
+  #     transform = list(type= 'filter',
+  #                      config= list(dimension= 'XkeyX', reg='^')
+  #                      #"^(50|56|62|68|74|152|158)$")
+  #     )))
+  #   widget$x$opts$dataset <- append(widget$x$opts$dataset, tmp)
+  #   # if ('series' %in% names(opt1))
+  #   #   wt$x$opts$series[[1]]$datasetId= 'Xtalk'
+  # }
+# not grouped
+  widget$opts$dataset <- list(list(dimensions= colnames(data), source= (data)))
   #  check for theme
   theme <- getOption("ECHARTS4R_THEME") #  default theme
   if (!is.null(theme)) {

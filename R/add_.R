@@ -27,19 +27,25 @@ e_bar_ <- function(
     }
 
     # Attach keys for crosstalk
-    ct_keys_i <- if (".ct_key" %in% names(e$x$data[[i]])) {
-      e$x$data[[i]][[".ct_key"]]
-    } else NULL
-
-    if (!is.null(ct_keys_i)) {
-      vector <- lapply(seq_along(vector), function(j) {
-        pt <- if (is.list(vector[[j]])) vector[[j]] else list(value = vector[[j]])
-        pt$ct_key <- as.character(ct_keys_i[[j]])
-        pt
-      })
-    }
+    # ct_keys_i <- if (".ct_key" %in% names(e$x$data[[i]])) {
+    #   e$x$data[[i]][[".ct_key"]]
+    # } else NULL
+    #
+    # if (!is.null(ct_keys_i)) {
+    #   vector <- lapply(seq_along(vector), function(j) {
+    #     pt <- if (is.list(vector[[j]])) vector[[j]] else list(value = vector[[j]])
+    #     pt$ct_key <- as.character(ct_keys_i[[j]])
+    #     pt
+    #   })
+    # }
 
     e_serie <- list(data = vector)
+
+    if (!is.null(e$x$settings$crosstalk_group)) {
+      e_serie$datasetId <- 'Xtalk'
+      e_serie$data <- NULL  # remove inline data, dataset drives it
+      e_serie$encode <- list(x = e$x$mapping$x, y = serie)
+    }
 
     if (y_index != 0) {
       e <- .set_y_axis(e, serie, y_index, i)
@@ -77,6 +83,8 @@ e_bar_ <- function(
       }
 
       e$x$opts$series <- append(e$x$opts$series, list(e_serie))
+      # e$x$opts$series <- append(e$x$opts$series, list(datasetId= 'Xtalk'))
+      e$x$opts$series[[1]]$datasetId= 'Xtalk'
     } else {
       if (isTRUE(legend)) {
         e$x$opts$legend$data <- append(e$x$opts$legend$data, list(name))
@@ -147,6 +155,21 @@ e_line_ <- function(
       data = vector
     )
 
+    if (!is.null(e$x$settings$crosstalk_group)) {
+      if(!is.null(e$x$crosstalk_grpvar)){
+        # browser()
+        grp_val <- names(e$x$data)[i]  # current group value
+        # grp_val <- e$x$data[i][[1]][["XkeyX"]]
+        id <- paste0("Xtalk_", grp_val)
+      } else {
+        id <- 'Xtalk'
+      }
+
+      l$datasetId <- id
+      l$data <- NULL  # remove inline data, dataset drives it
+      l$encode <- list(x = e$x$mapping$x, y = serie)
+    }
+
     if (coord_system == "cartesian2d") {
       if (y_index != 0) {
         e <- .set_y_axis(e, serie, y_index, i)
@@ -200,6 +223,8 @@ e_line_ <- function(
     series_opts <- list(
       name = name,
       type = "line",
+      selectedMode = "single",
+      datasetId = if (!is.null(e$x$settings$crosstalk_group)) "Xtalk" else NULL,
       yAxisIndex = y_index,
       xAxisIndex = x_index,
       coordinateSystem = coord_system,
