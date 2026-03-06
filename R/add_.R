@@ -26,24 +26,16 @@ e_bar_ <- function(
       vector <- .add_bind2(e, vector, bind, i = i)
     }
 
-    # Attach keys for crosstalk
-    # ct_keys_i <- if (".ct_key" %in% names(e$x$data[[i]])) {
-    #   e$x$data[[i]][[".ct_key"]]
-    # } else NULL
-    #
-    # if (!is.null(ct_keys_i)) {
-    #   vector <- lapply(seq_along(vector), function(j) {
-    #     pt <- if (is.list(vector[[j]])) vector[[j]] else list(value = vector[[j]])
-    #     pt$ct_key <- as.character(ct_keys_i[[j]])
-    #     pt
-    #   })
-    # }
 
     e_serie <- list(data = vector)
 
-    if (!is.null(e$x$settings$crosstalk_group)) {
-      e_serie$datasetId <- 'Xtalk'
-      e_serie$data <- NULL  # remove inline data, dataset drives it
+    if (!is.null(e$x$settings$crosstalk_group) && !isTRUE(e$x$tl)) {
+
+      grp_val <- names(e$x$data)[i]
+      id <- if (!is.null(e$x$crosstalk_grpvar)) paste0("Xtalk_", grp_val) else "Xtalk"
+
+      e_serie$datasetId <- id
+      e_serie$data <- NULL
       e_serie$encode <- list(x = e$x$mapping$x, y = serie)
     }
 
@@ -155,18 +147,13 @@ e_line_ <- function(
       data = vector
     )
 
-    if (!is.null(e$x$settings$crosstalk_group)) {
-      if(!is.null(e$x$crosstalk_grpvar)){
-        # browser()
-        grp_val <- names(e$x$data)[i]  # current group value
-        # grp_val <- e$x$data[i][[1]][["XkeyX"]]
-        id <- paste0("Xtalk_", grp_val)
-      } else {
-        id <- 'Xtalk'
-      }
+    if (!is.null(e$x$settings$crosstalk_group) && !isTRUE(e$x$tl)) {
+
+      grp_val <- names(e$x$data)[i]
+      id <- if (!is.null(e$x$crosstalk_grpvar)) paste0("Xtalk_", grp_val) else "Xtalk"
 
       l$datasetId <- id
-      l$data <- NULL  # remove inline data, dataset drives it
+      l$data <- NULL
       l$encode <- list(x = e$x$mapping$x, y = serie)
     }
 

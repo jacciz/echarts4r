@@ -76,44 +76,31 @@ HTMLWidgets.widget({
 
   // ── ADD CROSSTALK BLOCK RIGHT AFTER setOption ──────────────────────
         if (x.settings.crosstalk_group) {
-          var tmp = opts.series.findIndex(x => x.datasetId === 'Xtalk');
+
+        var tmp = -1;
+        // adding this for timeline
+        if (opts.series) {
+          tmp = opts.series.findIndex(x => x.datasetId && x.datasetId.startsWith('Xtalk'));
+        } else if (opts.options && opts.options[0] && opts.options[0].series) {
+          tmp = opts.options[0].series.findIndex(x => x.datasetId && x.datasetId.startsWith('Xtalk'));
+        }
+        if (tmp === -1) tmp = 0;  // fallback to first series
+        chart.sext = tmp;
+
+         // var tmp = opts.series.findIndex(x => x.datasetId === 'Xtalk');
         if (tmp==undefined)
           console.log('no series found preset for crosstalk')
       	console.log(' echarty crosstalk on');
       	chart.sext = tmp;
       	chart.sele = [];
 
-/*
-  ctSel.on('change', function(e) {
-
-    if (e.sender === ctSel) return;  // ignore own events
-    applyFilter(e.value, chart);
-  });
-
-
-  ctFilter.on('change', function(e) {
-    if (e.sender === ctFilter) return;
-    applyFilter(e.value, chart);
-  });
-
-  chart.on('click', function(params) {
-    var key = params.data && params.data.XkeyX;
-    if (key) ctSel.set([String(key)]);
-  });
-
-  chart.getZr().on('click', function(e) {
-    if (!e.target) ctSel.set([]);
-  });
-*/
-
-// echarty
       	var sel_handle = new crosstalk.SelectionHandle();
       	sel_handle.setGroup(x.settings.crosstalk_group);
       	var ct_filter =  new crosstalk.FilterHandle();
       	ct_filter.setGroup(x.settings.crosstalk_group);
       	  // store all keys on chart for lookup - this is what chart.filk needs
-  chart.akeys = x.settings.crosstalk_key;  // all keys
-  chart.filk  = x.settings.crosstalk_key;  // keys indexed by data position
+        chart.akeys = x.settings.crosstalk_key;  // all keys
+        chart.filk  = x.settings.crosstalk_key;  // keys indexed by data position
 
 
 chart.on("brushselected", function(params) {
@@ -124,101 +111,157 @@ chart.on("brushselected", function(params) {
 
   var range = params.batch[0].areas[0].range;
   var selectedKeys = [];
-
-  // get the actual data length from the series
   var opt = chart.getOption();
-  var seriesData = opt.series[chart.sext].data;
-  var nPoints = seriesData ? seriesData.length : chart.akeys.length;
+  var series = opt.series || (opt.options ? opt.options[0].series : []);  // timeline guard
 
-  for (var i = 0; i < nPoints; i++) {
-    // convert data point to pixel - use actual y value not 0
-    var dataVal = seriesData ? seriesData[i] : null;
-    var yVal = dataVal ? (dataVal.value ? dataVal.value[1] : dataVal[1]) : 0;
-    var xVal = seriesData ? (dataVal.value ? dataVal.value[0] : dataVal[0]) : i;
+  series.forEach(function(s, si) {
+    var model = chart.getModel().getSeriesByIndex(si);
+    if (!model) return;
+    var data = model.getData();
 
-    var pt = chart.convertToPixel({seriesIndex: chart.sext}, [xVal, yVal]);
-    console.log("bar", i, "pixel:", pt, "key:", chart.akeys[i]);
+    for (var i = 0; i < data.count(); i++) {
+      if (!s.encode) return;
+      var xVal = data.get(s.encode.x, i);
+      var yVal = data.get(s.encode.y, i);
+      var pt = chart.convertToPixel({seriesIndex: si}, [xVal, yVal]);
 
-    if (pointInPolygon(pt, range)) {
-      selectedKeys.push(String(chart.akeys[i]));
-    }
-  }
-
-      console.log("selected keys:", selectedKeys);
-      sel_handle.set(selectedKeys);
-    });
-    function pointInPolygon(point, polygon) {
-      var x = point[0], y = point[1];
-      var inside = false;
-      for (var i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-        var xi = polygon[i][0], yi = polygon[i][1];
-        var xj = polygon[j][0], yj = polygon[j][1];
-        var intersect = ((yi > y) != (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
-        if (intersect) inside = !inside;
+      if (pointInPolygon(pt, range)) {
+        var key = String(data.get('XkeyX', i));
+        selectedKeys.push(key);
       }
-      return inside;
     }
-var opt = chart.getOption();
+  });
+
+  sel_handle.set(selectedKeys);
+});
+
+        chart.on("brushEnd", function(params) {
+          if (params.areas.length === 0) sel_handle.set([]);
+        });
+            function pointInPolygon(point, polygon) {
+              var x = point[0], y = point[1];
+              var inside = false;
+              for (var i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+                var xi = polygon[i][0], yi = polygon[i][1];
+                var xj = polygon[j][0], yj = polygon[j][1];
+                var intersect = ((yi > y) != (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+                if (intersect) inside = !inside;
+              }
+              return inside;
+            }
+        var opt = chart.getOption();
 
 
-      	chart.on("brushEnd", function(keys) {    // release selection FROM echarty
-      	console.log('brushend');
-      		if (keys.areas.length==0)
-      			sel_handle.set([]);
-      			//sel_handle.set(this.akeys.map(String));  // restore
-      	})
+chart.on("selectchanged", function(keys) {
+  if (!keys.isFromClick) return;
 
-        	chart.on("selectchanged", function(keys) { // send keys FROM echarty
-        	console.log('select_change');
-        	console.log(keys.selected);
-        		let items = [];
-        		if (keys.selected.length>0)
-        		    items = keys.selected[0].dataIndex;
-        		if (keys.isFromClick) {
-        		  //if (items.length==0) items = this.akeys; // send all keys: bad for map
-        	    tmp = items.map(i=> chart.filk[i])
-        		  sel_handle.set(tmp.map(String));
-              chart.sele = items;
-        		}
-      	})
+  var selectedKeys = [];
+  keys.selected.forEach(function(s) {
+    var model = chart.getModel().getSeriesByIndex(s.seriesIndex);
+    if (!model) return;
+    var data = model.getData();
+    s.dataIndex.forEach(function(di) {
+      var key = data.get('XkeyX', di);
+      if (key !== undefined) selectedKeys.push(String(key));
+    });
+  });
 
-        sel_handle.on("change", function(e) {
-          if (e.sender == sel_handle) return;
+  if (selectedKeys.length === 0) {
+    ct_filter.clear();  // clear filter = show all
+  } else {
+    ct_filter.set(selectedKeys);  // filter to selected
+  }
+});
 
-          // clear previous highlight
-          if (e.oldValue && e.oldValue.length > 0) {
-            tmp = e.oldValue.map(r => chart.akeys.indexOf(r));  // use akeys not filk
-            tmp = tmp.filter(i => i > -1);  // remove -1 (not found)
-            console.log("downplay indices:", tmp);
-            chart.dispatchAction({ type: 'downplay',
-              seriesIndex: chart.sext, dataIndex: tmp });
-          }
+var isTimeline = x.tl;
 
-          if (e.value && e.value.length > 0) {
-            tmp = e.value.map(r => chart.akeys.indexOf(r));  // use akeys not filk
-            tmp = tmp.filter(i => i > -1);
-            console.log("highlight indices:", tmp);
-            chart.dispatchAction({ type: 'highlight',
-              seriesIndex: chart.sext, dataIndex: tmp });
+sel_handle.on("change", function(e) {
+  if (e.sender == sel_handle) return;
+  var inKeys = e.value ? e.value.map(String) : [];
+
+  if (isTimeline) {
+    // for timeline, update each frame's data
+    var opt = chart.getOption();
+    opt.options.forEach(function(frame, oi) {
+      if (!frame.series) return;
+      frame.series.forEach(function(s, si) {
+        if (!s.data) return;
+        var newData = s.data.map(function(d) {
+          if (!d) return d;
+          var key = String(d.ct_key);
+          if (inKeys.length === 0 || inKeys.indexOf(key) > -1) {
+            return Object.assign({}, d, { itemStyle: { opacity: 1 } });
+          } else {
+            return Object.assign({}, d, { itemStyle: { opacity: 0.1 } });
           }
         });
+        var update = { options: [] };
+        for (var p = 0; p < oi; p++) update.options.push({});
+        update.options.push({ series: [{ data: newData }] });
+        chart.setOption(update, false);
+      });
+    });
+  } else {
+    // existing non-timeline handler
+    var opt = chart.getOption();
+    var series = opt.series || [];
+    series.forEach(function(s, si) {
+      var model = chart.getModel().getSeriesByIndex(si);
+      if (!model) return;
+      var data = model.getData();
+      var matchIdx = [];
+      for (var i = 0; i < data.count(); i++) {
+        var key = String(data.get('XkeyX', i));
+        if (inKeys.indexOf(key) > -1) matchIdx.push(i);
+      }
+      if (inKeys.length === 0) {
+        chart.dispatchAction({ type: 'downplay', seriesIndex: si });
+      } else if (matchIdx.length > 0) {
+        chart.dispatchAction({ type: 'highlight', seriesIndex: si, dataIndex: matchIdx });
+      }
+    });
+  }
+});
 
 ct_filter.on('change', function(e) {
   if (e.sender == ct_filter) return;
   if (e.value == undefined) e.value = chart.akeys;
 
-  rexp = (e.value.length == chart.akeys.length)
-    ? '^' : '^('+ e.value.join('|') +')$';
-
-  var opt = chart.getOption();
-  // update ALL Xtalk datasets
-  opt.dataset.forEach(function(d) {
-    if (d.id && d.id.startsWith('Xtalk_')) {
-      d.transform[1].config.reg = rexp;  // second transform is the key filter
-    }
-  });
-  chart.setOption(opt, false);
+  if (isTimeline) {
+    var opt = chart.getOption();
+    opt.options.forEach(function(frame, oi) {
+      if (!frame.series) return;
+      frame.series.forEach(function(s) {
+        if (!s.data) return;
+        var newData = s.data.map(function(d) {
+          if (!d) return d;
+          var key = String(d.ct_key);
+          var match = e.value.map(String).indexOf(key) > -1;
+          return match ? d : null;
+        });
+        var update = { options: [] };
+        for (var p = 0; p < oi; p++) update.options.push({});
+        update.options.push({ series: [{ data: newData }] });
+        chart.setOption(update, false);
+      });
+    });
+  } else {
+    // existing non-timeline handler
+    rexp = (e.value.length == chart.akeys.length)
+      ? '^' : '^('+ e.value.join('|') +')$';
+    var opt = chart.getOption();
+    if (!opt.dataset) return;
+    opt.dataset.forEach(function(d) {
+      if (d.id && d.id.startsWith('Xtalk_')) {
+        if (d.transform && d.transform[1]) d.transform[1].config.reg = rexp;
+      } else if (d.id === 'Xtalk') {
+        if (d.transform) d.transform.config.reg = rexp;
+      }
+    });
+    chart.setOption(opt, false);
+  }
 });
+
       	/*
 
             // cache original data for both timeline and non-timeline

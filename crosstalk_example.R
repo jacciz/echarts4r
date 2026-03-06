@@ -5,12 +5,12 @@ library(dplyr);
 library(tibble);
 
 
-sd_full <- SharedData$new(mtcars, key = ~as.character(cyl))
+sd_full <- SharedData$new(mtcars, key = ~rownames(mtcars))
 
 sdf <- mtcars |>
   dplyr::group_by(cyl) |>
   (\(d) SharedData$new(d,
-                       key = ~as.character(cyl),
+                       key = ~rownames(mtcars),
                        group = sd_full$groupName()
   ))()
 

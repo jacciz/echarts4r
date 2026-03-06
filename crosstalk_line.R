@@ -10,9 +10,10 @@ sd_chart <- iris |>
     key =  ~rownames(iris),
     group = sd_full$groupName()
   )
+
 sd_chart |>
   # group_by(Species) |>
-  e_charts(Sepal.Length) |>
+  e_charts(Sepal.Length, timeline = TRUE) |>
   e_line(Sepal.Width)
 
 bscols(

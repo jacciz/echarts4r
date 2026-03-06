@@ -134,19 +134,7 @@ e_charts.default <- function(
     data <- (data$origData())
     data$XkeyX <- ct_key  # add key column
     isGroupedData <- dplyr::is.grouped_df(data)
-    #
-    # # reapply the grouping
-    # grp_vars <- dplyr::group_vars(data$origData())
-    # if (length(grp_vars) > 0) {
-    #   dat <- dplyr::group_by(dat, dplyr::across(dplyr::all_of(grp_vars)))
-    # }
   }
-
-  # if (xtKey=='XkeyX') data$XkeyX <- ct_key
-  # if (length(colnames(df)) == 1 && !dplyr::is.grouped_df(data))
-  #   data <- data |> dplyr::mutate(duplicate= 1:nrow(data))
-  # lenv$coNames <- ''
-  # lenv$coNames <- colnames(data)
 
   # forward options using x
   x <- list(
@@ -181,28 +169,6 @@ e_charts.default <- function(
   }
 
   # Add keys for crosstalk - behaves different if timeline and if grouped data
-  # then attach keys to each split group
-#   if (!is.null(ct_key) & isFALSE(isGroupedData)) {
-#     x$data <- lapply(x$data, function(grp) {
-#       # match rows back to original data to get correct keys
-#       grp$.ct_key <- ct_key[as.integer(rownames(grp))]
-#       grp
-#     })
-#   }
-#
-# # For grouped data
-#   if (!is.null(ct_key) & isTRUE(isGroupedData)) {
-#     x$data <- setNames(
-#       lapply(seq_along(x$data), function(i) {
-#         grp <- x$data[[i]]
-#         idx <- as.integer(rownames(grp))
-#         cat("group", i, "idx:", head(idx), "\n")  # debug
-#         grp$.ct_key <- ct_key[idx]
-#         grp
-#       }),
-#       names(x$data)  # preserve original names for each group
-#     )
-#   }
   # e$opts$dataset[[1]]$source$XkeyX
   if (!is.null(ct_group) & isTRUE(isGroupedData)) {
     flat_data <- dplyr::ungroup(data)
@@ -262,14 +228,6 @@ e_charts.default <- function(
       )
     )
   }
-# browser()
-# Apply a dplyr generic to a dataset while preserving the crosstalk 'set' attribute
-# preserve_set <- function(.data, func, ...) {
-#   structure(func(.data, ...), set = attr(.data, "set"))
-# }
-#
-# d=preserve_set(x$data[[1]], dplyr::group_by, ...)
-# plotly:::preserve_set(d, plotly:::group_by_add, !!rlang::sym(".ct_key"))
 
   if (!is.null(xmap)) {
     x$mapping$x <- xmap[1]
