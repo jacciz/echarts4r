@@ -168,9 +168,27 @@ e_charts.default <- function(
     x$data <- map_grps_(data, timeline)
   }
 
-  # Add keys for crosstalk - behaves different if timeline/if grouped data
+  # Start crosstalk -------------------------------------------------------
+  # Crosstalk works by adding a column called 'XkeyX' so each row (i.e. data
+  # point) will have a unique key. e$x$settings contains crosstalk_key and
+  # crosstalk_group - assigned by crosstalk, unless specified
+  # e$x$crosstalk_grpvar contains name of group (if any)
+
+  # When data is constructed (i.e. in e_line()), each data point will have an
+  # 'XkeyX'. This key is used to identify which data was selected. This gets
+  # matched using this id and datasetId. These values are found:
+
+  # e$x$opts$dataset[[1]]$source[[1]]$XkeyX
+  # e$x$opts$series[[1]]$datasetId
+
+
+  # This will attach dimensions (i.e. colnames) and e$opts$dataset (i.e.)
+  # js / crosstalk and the js looks for this column to grab
   if (!is.null(ct_group) & isTRUE(isGroupedData)) {
+
     flat_data <- dplyr::ungroup(data)
+
+    # Just the name of the group_by variable
     grp_var   <- if (dplyr::is_grouped_df(data)) dplyr::group_vars(data)[1] else NULL
 
     source_data <- lapply(seq_len(nrow(flat_data)), function(i) {
@@ -220,6 +238,8 @@ e_charts.default <- function(
       )
     )
   }
+
+# End crosstalk -----------------------------------------------------------
 
   if (!is.null(xmap)) {
     x$mapping$x <- xmap[1]
@@ -305,20 +325,7 @@ e_charts.default <- function(
       padding = 0
     )
   )
-  #
-  # if (isCrosstalk) {  # add transformation filter
-  #   tmp <- list(list(
-  #     id= 'Xtalk',
-  #     transform = list(type= 'filter',
-  #                      config= list(dimension= 'XkeyX', reg='^')
-  #                      #"^(50|56|62|68|74|152|158)$")
-  #     )))
-  #   widget$x$opts$dataset <- append(widget$x$opts$dataset, tmp)
-  #   # if ('series' %in% names(opt1))
-  #   #   wt$x$opts$series[[1]]$datasetId= 'Xtalk'
-  # }
-# not grouped
-  widget$opts$dataset <- list(list(dimensions= colnames(data), source= (data)))
+
   #  check for theme
   theme <- getOption("ECHARTS4R_THEME") #  default theme
   if (!is.null(theme)) {

@@ -75,17 +75,20 @@ HTMLWidgets.widget({
           chart.setOption(opts);
 
   // ── ADD CROSSTALK ──────────────────────
+  // this does use internal echarts APIs: model.getData(), data.get(), chart.getModel().getSeriesByIndex()
         if (x.settings.crosstalk_group) {
 
         var isTimeline = x.tl;
         var tmp = -1;
 
+        // select idx of series by finding which one has 'Xtalk' as id: e$x$opts$series[[1]]$datasetId
         if (opts.series) {
           tmp = opts.series.findIndex(x => x.datasetId && x.datasetId.startsWith('Xtalk'))
           // for timeline
         } else if (opts.options && opts.options[0] && opts.options[0].series) {
           tmp = opts.options[0].series.findIndex(x => x.datasetId && x.datasetId.startsWith('Xtalk'));
         }
+
         if (tmp === -1) tmp = 0;  // fallback to first series
 
       	var sel_handle = new crosstalk.SelectionHandle();
@@ -94,9 +97,10 @@ HTMLWidgets.widget({
       	sel_handle.setGroup(x.settings.crosstalk_group);
       	ct_filter.setGroup(x.settings.crosstalk_group);
 
-      	  // store all keys on chart for lookup - this is what chart.filk needs
-        chart.akeys = x.settings.crosstalk_key;  // all keys
+      	  // store all keys on chart for lookup
+        chart.akeys = x.settings.crosstalk_key;
 
+        // Gets keys from brush
         chart.on("brushselected", function(params) {
           if (!params.batch || !params.batch[0] || !params.batch[0].areas || params.batch[0].areas.length === 0) {
     sel_handle.set([]);
@@ -116,12 +120,11 @@ HTMLWidgets.widget({
           sel_handle.set(selectedKeys);
         });
 
-
+        // Reset keys from brush
         chart.on("brushEnd", function(params) {
           if (params.areas.length === 0) sel_handle.set([]);
         });
 
-        //var opt = chart.getOption();
 
         chart.on("selectchanged", function(keys) {
           if (!keys.isFromClick) return;
@@ -172,7 +175,7 @@ HTMLWidgets.widget({
           } else {
             var opt = chart.getOption();
             var series = opt.series || [];
-            // First, collect all the highlights.
+            // First, collect all the highlights. Was having issues with highlighting grouped data.
             var highlights = [];
             series.forEach(function(s, si) {
               var model = chart.getModel().getSeriesByIndex(si);
@@ -242,22 +245,6 @@ HTMLWidgets.widget({
         });
 
       	/*
-
-            // cache original data for both timeline and non-timeline
-          var isTimeline = x.tl;
-
-          var originalOptions = isTimeline
-            ? JSON.parse(JSON.stringify(x.opts.options))  // [{series:[...]}, {series:[...]}, ...]
-            : JSON.parse(JSON.stringify(x.opts.series));  // [{data:[...]}, ...]
-
-          // safely get the source data
-          var rawSeries  = isTimeline
-            ? (x.opts && x.opts.options)
-            : (x.opts && x.opts.series);
-
-          var originalOptions = JSON.parse(JSON.stringify(rawSeries));
-
-
                   // Outbound: broadcast clicks to other widgets
                   chart.on("click", function(params) {
                     var key = params.data && params.data.ct_key;
