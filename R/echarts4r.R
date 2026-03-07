@@ -169,7 +169,7 @@ e_charts.default <- function(
   }
 
   # Start crosstalk -------------------------------------------------------
-  # First, acknowledge{echarty} and helgasoft for guidance on how to implement
+  # First, I'll acknowledge{echarty} and helgasoft for guidance on how to implement
   # this. https://github.com/helgasoft/echarty/
 
   # Crosstalk works by adding a column called 'XkeyX' so each row (i.e. data
