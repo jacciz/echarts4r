@@ -26,7 +26,6 @@ e_bar_ <- function(
       vector <- .add_bind2(e, vector, bind, i = i)
     }
 
-
     e_serie <- list(data = vector)
 
     if (!is.null(e$x$settings$crosstalk_group) && !isTRUE(e$x$tl)) {
@@ -75,13 +74,10 @@ e_bar_ <- function(
       }
 
       e$x$opts$series <- append(e$x$opts$series, list(e_serie))
-      # e$x$opts$series <- append(e$x$opts$series, list(datasetId= 'Xtalk'))
-      e$x$opts$series[[1]]$datasetId= 'Xtalk'
     } else {
       if (isTRUE(legend)) {
         e$x$opts$legend$data <- append(e$x$opts$legend$data, list(name))
       }
-
       e$x$opts$options[[i]]$series <- append(e$x$opts$options[[i]]$series, list(e_serie))
     }
   }
@@ -211,7 +207,6 @@ e_line_ <- function(
       name = name,
       type = "line",
       selectedMode = "single",
-      datasetId = if (!is.null(e$x$settings$crosstalk_group)) "Xtalk" else NULL,
       yAxisIndex = y_index,
       xAxisIndex = x_index,
       coordinateSystem = coord_system,

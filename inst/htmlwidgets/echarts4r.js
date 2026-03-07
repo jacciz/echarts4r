@@ -154,29 +154,6 @@ HTMLWidgets.widget({
         if (e.sender == sel_handle) return;
         var inKeys = e.value ? e.value.map(String) : [];
           // chart → chart: highlight/downplay
-          if (isTimeline) {
-            var opt = chart.getOption();
-            opt.options.forEach(function(frame, oi) {
-              if (!frame.series) return;
-              frame.series.forEach(function(s) {
-                if (!s.data) return;
-                var newData = s.data.map(function(d) {
-                  if (!d) return d;
-                  // timeline uses ct_key, not XkeyX
-                  var key = String(d.ct_key);
-                  if (inKeys.length === 0 || inKeys.indexOf(key) > -1) {
-                    return Object.assign({}, d, { itemStyle: { opacity: 1 } });
-                  } else {
-                    return Object.assign({}, d, { itemStyle: { opacity: 0.1 } });
-                  }
-                });
-                var update = { options: [] };
-                for (var p = 0; p < oi; p++) update.options.push({});
-                update.options.push({ series: [{ data: newData }] });
-                chart.setOption(update, false);
-              });
-            });
-          } else {
             var opt = chart.getOption();
             var series = opt.series || [];
             // First, collect all the highlights. Was having issues with highlighting grouped data.
@@ -207,7 +184,7 @@ HTMLWidgets.widget({
                   chart.dispatchAction({ type: 'highlight', seriesIndex: h.si, dataIndex: h.matchIdx });
                 }
               });
-            }
+
             };
       });
 
@@ -215,27 +192,8 @@ HTMLWidgets.widget({
         ct_filter.on('change', function(e) {
           if (e.sender == ct_filter) return;
           if (e.value == undefined) e.value = chart.akeys;
-
-          if (isTimeline) {
-            var opt = chart.getOption();
-            opt.options.forEach(function(frame, oi) {
-              if (!frame.series) return;
-              frame.series.forEach(function(s) {
-                if (!s.data) return;
-                var newData = s.data.map(function(d) {
-                  if (!d) return d;
-            // timeline uses ct_key, not XkeyX
-                  var key = String(d.ct_key);
-                  var match = e.value.map(String).indexOf(key) > -1;
-                  return match ? d : null;
-                });
-                var update = { options: [] };
-                for (var p = 0; p < oi; p++) update.options.push({});
-                update.options.push({ series: [{ data: newData }] });
-                chart.setOption(update, false);
-              });
-            });
-          } else {
+var opt = chart.getOption();
+console.log(opt.dataset.find(x => x.id === 'Xtalk'));
             // existing non-timeline handler
             rexp = (e.value.length == chart.akeys.length)
               ? '^' : '^('+ e.value.join('|') +')$';
@@ -251,75 +209,8 @@ HTMLWidgets.widget({
               }
             });
             chart.setOption(opt, false);
-          }
+
         });
-
-      	/*
-                  // Outbound: broadcast clicks to other widgets
-                  chart.on("click", function(params) {
-                    var key = params.data && params.data.ct_key;
-                    if (key) ctSel.set([key]);
-                  });
-
-                  // Clear selection when clicking blank canvas
-                  chart.getZr().on("click", function(e) {
-                    if (!e.target) ctSel.set([]);
-                  });
-
-                  // Inbound: receive selections from other widgets
-          ctSel.on("change", function(e) {
-              console.log("received keys:", e.value);
-  console.log("series data:", JSON.stringify(chart.getOption().series[0].data));
-            var keys = e.value;
-
-            if (isTimeline) {
-                 // find which frame index matches the selected key
-              originalOptions.forEach(function(opt, oi) {
-                if (!opt.series) return;
-                opt.series.forEach(function(s) {
-                  s.data.forEach(function(d) {
-                    if (d && keys.indexOf(d.ct_key) > -1) {
-                      // navigate timeline to this frame
-                      chart.dispatchAction({
-                        type: "timelineChange",
-                        currentIndex: oi
-                      });
-                    }
-                  });
-                });
-              });
-            } else {
-              // non-timeline
-              originalOptions.forEach(function(s, si) {
-                var newData = s.data.map(function(d) {
-                  if (!keys || keys.length === 0) return d;
-                  return keys.indexOf(d.ct_key) > -1 ? d : null;
-                });
-                chart.setOption({ series: [{ data: newData }] }, false);
-              });
-            }
-          });
-
-        // outbound: chart click → broadcast selection
-        chart.on("click", function(params) {
-        var key = params.data && params.data.ct_key;
-        console.log("clicked key:", key);
-        if (key) ctSel.set([key]);
-      });
-        chart.getZr().on("click", function(e) {
-          if (!e.target) ctSel.set([]);
-        });
-          // Inbound: receive filter changes (filter_select, filter_slider etc.)
-          ctFilter.on("change", function(e) {
-            var keys = e.value;
-            _x.opts.series.forEach(function(s, si) {
-              var filtered = keys
-                ? s.data.map(function(d) { return keys.indexOf(d.ct_key) > -1 ? d : null; })
-                : s.data;
-              chart.setOption({ series: [{ data: filtered }] }, false);
-            });
-          });
-*/
         }
         // ── END CROSSTALK ────────────────────────────────────────────
         // shiny callbacks
