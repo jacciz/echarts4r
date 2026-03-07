@@ -258,6 +258,8 @@ navbar:
           href: articles/timeline.html
         - text: "Matrix"
           href: articles/matrix.html
+        - text: "Crosstalk"
+          href: articles/crosstalk.html
     - text: "Shiny"
       menu:
         - text: 'Basics'
@@ -266,7 +268,7 @@ navbar:
           href: articles/boxes.html
         - text: 'Proxies'
           href: articles/proxies.html
-    
+
   right:
     - icon: fab fa-github fa-lg
       href: https://github.com/JohnCoene/echarts4r

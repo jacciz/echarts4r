@@ -15,10 +15,11 @@ sdf <- mtcars |>
   ))()
 
 p <- sdf |> e_charts(hp) |> e_line(mpg,
-    selectedMode = 'single',
+    selectedMode = 'multiple',
+    select = list(itemStyle= list(color='magenta')),
     emphasis = list(focus='self', blurScope='series'),
-    blur= list(itemStyle= list(opacity = 0.3)),
-    datasetId = "Xtalk"
+    blur= list(itemStyle= list(opacity = 0.3))
+    # datasetId = "Xtalk"
   )
 
 styl <- 'width:50%;display:block;float:left;'

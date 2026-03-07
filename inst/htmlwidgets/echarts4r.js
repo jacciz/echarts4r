@@ -74,193 +74,172 @@ HTMLWidgets.widget({
         if(x.draw === true)
           chart.setOption(opts);
 
-  // ── ADD CROSSTALK BLOCK RIGHT AFTER setOption ──────────────────────
+  // ── ADD CROSSTALK ──────────────────────
         if (x.settings.crosstalk_group) {
 
+        var isTimeline = x.tl;
         var tmp = -1;
-        // adding this for timeline
+
         if (opts.series) {
-          tmp = opts.series.findIndex(x => x.datasetId && x.datasetId.startsWith('Xtalk'));
+          tmp = opts.series.findIndex(x => x.datasetId && x.datasetId.startsWith('Xtalk'))
+          // for timeline
         } else if (opts.options && opts.options[0] && opts.options[0].series) {
           tmp = opts.options[0].series.findIndex(x => x.datasetId && x.datasetId.startsWith('Xtalk'));
         }
         if (tmp === -1) tmp = 0;  // fallback to first series
-        chart.sext = tmp;
-
-         // var tmp = opts.series.findIndex(x => x.datasetId === 'Xtalk');
-        if (tmp==undefined)
-          console.log('no series found preset for crosstalk')
-      	console.log(' echarty crosstalk on');
-      	chart.sext = tmp;
-      	chart.sele = [];
 
       	var sel_handle = new crosstalk.SelectionHandle();
-      	sel_handle.setGroup(x.settings.crosstalk_group);
       	var ct_filter =  new crosstalk.FilterHandle();
+
+      	sel_handle.setGroup(x.settings.crosstalk_group);
       	ct_filter.setGroup(x.settings.crosstalk_group);
+
       	  // store all keys on chart for lookup - this is what chart.filk needs
         chart.akeys = x.settings.crosstalk_key;  // all keys
-        chart.filk  = x.settings.crosstalk_key;  // keys indexed by data position
 
-
-chart.on("brushselected", function(params) {
-  if (!params.batch || !params.batch[0].areas || params.batch[0].areas.length === 0) {
+        chart.on("brushselected", function(params) {
+          if (!params.batch || !params.batch[0] || !params.batch[0].areas || params.batch[0].areas.length === 0) {
     sel_handle.set([]);
-    return;
-  }
+            return;
+          }
+          var selectedKeys = [];
+          params.batch[0].selected.forEach(function(s) {
+            var model = chart.getModel().getSeriesByIndex(s.seriesIndex);
+            if (!model) return;
+            var data = model.getData();
+            s.dataIndex.forEach(function(di) {
+              var key = data.get('XkeyX', di);
+              if (key !== undefined) selectedKeys.push(String(key));
+            });
+          });
 
-  var range = params.batch[0].areas[0].range;
-  var selectedKeys = [];
-  var opt = chart.getOption();
-  var series = opt.series || (opt.options ? opt.options[0].series : []);  // timeline guard
+          sel_handle.set(selectedKeys);
+        });
 
-  series.forEach(function(s, si) {
-    var model = chart.getModel().getSeriesByIndex(si);
-    if (!model) return;
-    var data = model.getData();
-
-    for (var i = 0; i < data.count(); i++) {
-      if (!s.encode) return;
-      var xVal = data.get(s.encode.x, i);
-      var yVal = data.get(s.encode.y, i);
-      var pt = chart.convertToPixel({seriesIndex: si}, [xVal, yVal]);
-
-      if (pointInPolygon(pt, range)) {
-        var key = String(data.get('XkeyX', i));
-        selectedKeys.push(key);
-      }
-    }
-  });
-
-  sel_handle.set(selectedKeys);
-});
 
         chart.on("brushEnd", function(params) {
           if (params.areas.length === 0) sel_handle.set([]);
         });
-            function pointInPolygon(point, polygon) {
-              var x = point[0], y = point[1];
-              var inside = false;
-              for (var i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-                var xi = polygon[i][0], yi = polygon[i][1];
-                var xj = polygon[j][0], yj = polygon[j][1];
-                var intersect = ((yi > y) != (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
-                if (intersect) inside = !inside;
-              }
-              return inside;
-            }
-        var opt = chart.getOption();
 
+        //var opt = chart.getOption();
 
-chart.on("selectchanged", function(keys) {
-  if (!keys.isFromClick) return;
+        chart.on("selectchanged", function(keys) {
+          if (!keys.isFromClick) return;
 
-  var selectedKeys = [];
-  keys.selected.forEach(function(s) {
-    var model = chart.getModel().getSeriesByIndex(s.seriesIndex);
-    if (!model) return;
-    var data = model.getData();
-    s.dataIndex.forEach(function(di) {
-      var key = data.get('XkeyX', di);
-      if (key !== undefined) selectedKeys.push(String(key));
-    });
-  });
+          var selectedKeys = [];
+          keys.selected.forEach(function(s) {
+            var model = chart.getModel().getSeriesByIndex(s.seriesIndex);
+            if (!model) return;
+            var data = model.getData();
+            s.dataIndex.forEach(function(di) {
+              var key = data.get('XkeyX', di);
+              if (key !== undefined) selectedKeys.push(String(key));
+            });
+          });
 
-  if (selectedKeys.length === 0) {
-    ct_filter.clear();  // clear filter = show all
-  } else {
-    ct_filter.set(selectedKeys);  // filter to selected
-  }
-});
-
-var isTimeline = x.tl;
-
-sel_handle.on("change", function(e) {
-  if (e.sender == sel_handle) return;
-  var inKeys = e.value ? e.value.map(String) : [];
-
-  if (isTimeline) {
-    // for timeline, update each frame's data
-    var opt = chart.getOption();
-    opt.options.forEach(function(frame, oi) {
-      if (!frame.series) return;
-      frame.series.forEach(function(s, si) {
-        if (!s.data) return;
-        var newData = s.data.map(function(d) {
-          if (!d) return d;
-          var key = String(d.ct_key);
-          if (inKeys.length === 0 || inKeys.indexOf(key) > -1) {
-            return Object.assign({}, d, { itemStyle: { opacity: 1 } });
+          if (selectedKeys.length === 0) {
+            ct_filter.clear();  // clear filter = show all
           } else {
-            return Object.assign({}, d, { itemStyle: { opacity: 0.1 } });
+            ct_filter.set(selectedKeys);  // filter to selected
           }
         });
-        var update = { options: [] };
-        for (var p = 0; p < oi; p++) update.options.push({});
-        update.options.push({ series: [{ data: newData }] });
-        chart.setOption(update, false);
+
+       sel_handle.on("change", function(e) {
+        if (e.sender == sel_handle) return;
+        var inKeys = e.value ? e.value.map(String) : [];
+          // chart → chart: highlight/downplay
+          if (isTimeline) {
+            var opt = chart.getOption();
+            opt.options.forEach(function(frame, oi) {
+              if (!frame.series) return;
+              frame.series.forEach(function(s) {
+                if (!s.data) return;
+                var newData = s.data.map(function(d) {
+                  if (!d) return d;
+                  var key = String(d.ct_key);
+                  if (inKeys.length === 0 || inKeys.indexOf(key) > -1) {
+                    return Object.assign({}, d, { itemStyle: { opacity: 1 } });
+                  } else {
+                    return Object.assign({}, d, { itemStyle: { opacity: 0.1 } });
+                  }
+                });
+                var update = { options: [] };
+                for (var p = 0; p < oi; p++) update.options.push({});
+                update.options.push({ series: [{ data: newData }] });
+                chart.setOption(update, false);
+              });
+            });
+          } else {
+            var opt = chart.getOption();
+            var series = opt.series || [];
+            // First, collect all the highlights.
+            var highlights = [];
+            series.forEach(function(s, si) {
+              var model = chart.getModel().getSeriesByIndex(si);
+              if (!model) return;
+              var data = model.getData();
+              var matchIdx = [];
+              for (var i = 0; i < data.count(); i++) {
+                var key = String(data.get('XkeyX', i));
+                if (inKeys.indexOf(key) > -1) matchIdx.push(i);
+              }
+              highlights.push({ si: si, matchIdx: matchIdx });
+            });
+
+            // second pass: downplay all
+            highlights.forEach(function(h) {
+              chart.dispatchAction({ type: 'downplay', seriesIndex: h.si });
+            });
+
+            // third pass: highlight matches
+            if (inKeys.length > 0) {
+              highlights.forEach(function(h) {
+                if (h.matchIdx.length > 0) {
+                  chart.dispatchAction({ type: 'highlight', seriesIndex: h.si, dataIndex: h.matchIdx });
+                }
+              });
+            }
+            };
       });
-    });
-  } else {
-    // existing non-timeline handler
-    var opt = chart.getOption();
-    var series = opt.series || [];
-    series.forEach(function(s, si) {
-      var model = chart.getModel().getSeriesByIndex(si);
-      if (!model) return;
-      var data = model.getData();
-      var matchIdx = [];
-      for (var i = 0; i < data.count(); i++) {
-        var key = String(data.get('XkeyX', i));
-        if (inKeys.indexOf(key) > -1) matchIdx.push(i);
-      }
-      if (inKeys.length === 0) {
-        chart.dispatchAction({ type: 'downplay', seriesIndex: si });
-      } else if (matchIdx.length > 0) {
-        chart.dispatchAction({ type: 'highlight', seriesIndex: si, dataIndex: matchIdx });
-      }
-    });
-  }
-});
 
-ct_filter.on('change', function(e) {
-  if (e.sender == ct_filter) return;
-  if (e.value == undefined) e.value = chart.akeys;
+        ct_filter.on('change', function(e) {
+          if (e.sender == ct_filter) return;
+          if (e.value == undefined) e.value = chart.akeys;
 
-  if (isTimeline) {
-    var opt = chart.getOption();
-    opt.options.forEach(function(frame, oi) {
-      if (!frame.series) return;
-      frame.series.forEach(function(s) {
-        if (!s.data) return;
-        var newData = s.data.map(function(d) {
-          if (!d) return d;
-          var key = String(d.ct_key);
-          var match = e.value.map(String).indexOf(key) > -1;
-          return match ? d : null;
+          if (isTimeline) {
+            var opt = chart.getOption();
+            opt.options.forEach(function(frame, oi) {
+              if (!frame.series) return;
+              frame.series.forEach(function(s) {
+                if (!s.data) return;
+                var newData = s.data.map(function(d) {
+                  if (!d) return d;
+                  var key = String(d.ct_key);
+                  var match = e.value.map(String).indexOf(key) > -1;
+                  return match ? d : null;
+                });
+                var update = { options: [] };
+                for (var p = 0; p < oi; p++) update.options.push({});
+                update.options.push({ series: [{ data: newData }] });
+                chart.setOption(update, false);
+              });
+            });
+          } else {
+            // existing non-timeline handler
+            rexp = (e.value.length == chart.akeys.length)
+              ? '^' : '^('+ e.value.join('|') +')$';
+            var opt = chart.getOption();
+            if (!opt.dataset) return;
+            opt.dataset.forEach(function(d) {
+              if (d.id && d.id.startsWith('Xtalk_')) {
+                if (d.transform && d.transform[1]) d.transform[1].config.reg = rexp;
+              } else if (d.id === 'Xtalk') {
+                if (d.transform) d.transform.config.reg = rexp;
+              }
+            });
+            chart.setOption(opt, false);
+          }
         });
-        var update = { options: [] };
-        for (var p = 0; p < oi; p++) update.options.push({});
-        update.options.push({ series: [{ data: newData }] });
-        chart.setOption(update, false);
-      });
-    });
-  } else {
-    // existing non-timeline handler
-    rexp = (e.value.length == chart.akeys.length)
-      ? '^' : '^('+ e.value.join('|') +')$';
-    var opt = chart.getOption();
-    if (!opt.dataset) return;
-    opt.dataset.forEach(function(d) {
-      if (d.id && d.id.startsWith('Xtalk_')) {
-        if (d.transform && d.transform[1]) d.transform[1].config.reg = rexp;
-      } else if (d.id === 'Xtalk') {
-        if (d.transform) d.transform.config.reg = rexp;
-      }
-    });
-    chart.setOption(opt, false);
-  }
-});
 
       	/*
 
@@ -345,7 +324,7 @@ ct_filter.on('change', function(e) {
           });
 */
         }
-        // ── END CROSSTALK BLOCK ────────────────────────────────────────────
+        // ── END CROSSTALK ────────────────────────────────────────────
         // shiny callbacks
         if (HTMLWidgets.shinyMode) {
 

@@ -168,8 +168,7 @@ e_charts.default <- function(
     x$data <- map_grps_(data, timeline)
   }
 
-  # Add keys for crosstalk - behaves different if timeline and if grouped data
-  # e$opts$dataset[[1]]$source$XkeyX
+  # Add keys for crosstalk - behaves different if timeline/if grouped data
   if (!is.null(ct_group) & isTRUE(isGroupedData)) {
     flat_data <- dplyr::ungroup(data)
     grp_var   <- if (dplyr::is_grouped_df(data)) dplyr::group_vars(data)[1] else NULL
@@ -200,13 +199,6 @@ e_charts.default <- function(
 
   # after building x$opts, add the dataset + Xtalk transform
   if (!is.null(ct_group) & isFALSE(isGroupedData)) {
-    # x$opts$dataset <- list(
-    #   list(dimensions = colnames(data), source = as.list(data)),
-    #   list(id = 'Xtalk', transform = list(
-    #     type = 'filter',
-    #     config = list(dimension = 'XkeyX', reg = '^')
-    #   ))
-    # )
     # convert data frame to list of rows
     source_data <- lapply(seq_len(nrow(data)), function(i) {
       as.list(data[i, , drop = FALSE])
