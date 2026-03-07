@@ -169,6 +169,9 @@ e_charts.default <- function(
   }
 
   # Start crosstalk -------------------------------------------------------
+  # First, acknowledge{echarty} and helgasoft for guidance on how to implement
+  # this. https://github.com/helgasoft/echarty/
+
   # Crosstalk works by adding a column called 'XkeyX' so each row (i.e. data
   # point) will have a unique key. e$x$settings contains crosstalk_key and
   # crosstalk_group - assigned by crosstalk, unless specified
@@ -181,6 +184,7 @@ e_charts.default <- function(
   # e$x$opts$dataset[[1]]$source[[1]]$XkeyX
   # e$x$opts$series[[1]]$datasetId
 
+  # Note: timeline uses ct_key
 
   # This will attach dimensions (i.e. colnames) and e$opts$dataset (i.e.)
   # js / crosstalk and the js looks for this column to grab
