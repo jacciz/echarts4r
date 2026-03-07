@@ -125,7 +125,7 @@ HTMLWidgets.widget({
           if (params.areas.length === 0) sel_handle.set([]);
         });
 
-
+      // Keys from echarts to crosstalk
         chart.on("selectchanged", function(keys) {
           if (!keys.isFromClick) return;
 
@@ -139,14 +139,16 @@ HTMLWidgets.widget({
               if (key !== undefined) selectedKeys.push(String(key));
             });
           });
-
+      // Clicking an echart point will filter, not highlight, due to ct_filter
           if (selectedKeys.length === 0) {
             ct_filter.clear();  // clear filter = show all
           } else {
+            // Will filter, not highlight
             ct_filter.set(selectedKeys);  // filter to selected
           }
         });
 
+// inbound selection handler
        sel_handle.on("change", function(e) {
         if (e.sender == sel_handle) return;
         var inKeys = e.value ? e.value.map(String) : [];
@@ -159,6 +161,7 @@ HTMLWidgets.widget({
                 if (!s.data) return;
                 var newData = s.data.map(function(d) {
                   if (!d) return d;
+                  // timeline uses ct_key, not XkeyX
                   var key = String(d.ct_key);
                   if (inKeys.length === 0 || inKeys.indexOf(key) > -1) {
                     return Object.assign({}, d, { itemStyle: { opacity: 1 } });
@@ -176,6 +179,7 @@ HTMLWidgets.widget({
             var opt = chart.getOption();
             var series = opt.series || [];
             // First, collect all the highlights. Was having issues with highlighting grouped data.
+            // Must do different loops so downplay and highlight are handled separately.
             var highlights = [];
             series.forEach(function(s, si) {
               var model = chart.getModel().getSeriesByIndex(si);
@@ -183,13 +187,14 @@ HTMLWidgets.widget({
               var data = model.getData();
               var matchIdx = [];
               for (var i = 0; i < data.count(); i++) {
+              // non-timeline find which data inx match via XkeyX
                 var key = String(data.get('XkeyX', i));
                 if (inKeys.indexOf(key) > -1) matchIdx.push(i);
               }
               highlights.push({ si: si, matchIdx: matchIdx });
             });
 
-            // second pass: downplay all
+            // second pass: downplay all - dim data
             highlights.forEach(function(h) {
               chart.dispatchAction({ type: 'downplay', seriesIndex: h.si });
             });
@@ -205,6 +210,7 @@ HTMLWidgets.widget({
             };
       });
 
+// inbound filter handler
         ct_filter.on('change', function(e) {
           if (e.sender == ct_filter) return;
           if (e.value == undefined) e.value = chart.akeys;
@@ -217,6 +223,7 @@ HTMLWidgets.widget({
                 if (!s.data) return;
                 var newData = s.data.map(function(d) {
                   if (!d) return d;
+            // timeline uses ct_key, not XkeyX
                   var key = String(d.ct_key);
                   var match = e.value.map(String).indexOf(key) > -1;
                   return match ? d : null;
@@ -234,6 +241,8 @@ HTMLWidgets.widget({
             var opt = chart.getOption();
             if (!opt.dataset) return;
             opt.dataset.forEach(function(d) {
+            // non-timeline find which data inx match via XkeyX.
+            // 'Xtalk_' is from grouped variables, 'Xtalk' is from ungrouped
               if (d.id && d.id.startsWith('Xtalk_')) {
                 if (d.transform && d.transform[1]) d.transform[1].config.reg = rexp;
               } else if (d.id === 'Xtalk') {
