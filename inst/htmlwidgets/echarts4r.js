@@ -76,6 +76,7 @@ HTMLWidgets.widget({
 
   // ── ADD CROSSTALK ──────────────────────
   // this does use internal echarts APIs: model.getData(), data.get(), chart.getModel().getSeriesByIndex()
+  // {echarty} was used for guidance: https://github.com/helgasoft/echarty/blob/main/inst/htmlwidgets/echarty.js
         if (x.settings.crosstalk_group) {
 
         var isTimeline = x.tl;
