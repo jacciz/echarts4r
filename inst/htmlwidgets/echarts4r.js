@@ -102,25 +102,71 @@ HTMLWidgets.widget({
         chart.akeys = x.settings.crosstalk_key;
 
         // Gets keys from brush
-        chart.on("brushselected", function(params) {
-          if (!params.batch || !params.batch[0] || !params.batch[0].areas || params.batch[0].areas.length === 0) {
-    sel_handle.set([]);
-            return;
-          }
-          var selectedKeys = [];
-          params.batch[0].selected.forEach(function(s) {
-            var model = chart.getModel().getSeriesByIndex(s.seriesIndex);
-            if (!model) return;
-            var data = model.getData();
-            s.dataIndex.forEach(function(di) {
-              var key = data.get('XkeyX', di);
-              if (key !== undefined) selectedKeys.push(String(key));
-            });
-          });
-
-          sel_handle.set(selectedKeys);
+  // brush selection → crosstalk (non-timeline only)
+  chart.on("brushselected", function(params) {
+    if (!params.batch || !params.batch[0] || !params.batch[0].areas || params.batch[0].areas.length === 0) {
+      sel_handle.set([]);
+      return;
+    }
+    var selectedKeys = [];
+    var hasSelected = params.batch[0].selected && params.batch[0].selected.some(function(s) {
+      return s.dataIndex && s.dataIndex.length > 0;
+    });
+    if (hasSelected) {
+      params.batch[0].selected.forEach(function(s) {
+        var model = chart.getModel().getSeriesByIndex(s.seriesIndex);
+        if (!model) return;
+        var data = model.getData();
+        s.dataIndex.forEach(function(di) {
+          var key = data.get('XkeyX', di);
+          if (key !== undefined) selectedKeys.push(String(key));
         });
+      });
+    } else {
+      // fallback: manual pixel hit testing for dataset-driven series
+      var area = params.batch[0].areas[0];
+      var range = area.range;
+      var brushType = area.brushType;
+      var opt = chart.getOption();
+      var series = opt.series || [];
+      series.forEach(function(s, si) {
+        var model = chart.getModel().getSeriesByIndex(si);
+        if (!model) return;
+        var data = model.getData();
+        for (var i = 0; i < data.count(); i++) {
+          if (!s.encode) continue;
+          var xVal = data.get(s.encode.x, i);
+          var yVal = data.get(s.encode.y, i);
+          var pt = chart.convertToPixel({ seriesIndex: si }, [xVal, yVal]);
+          if (!pt) continue;
+          var hit = false;
+          if (brushType === 'rect') {
+            hit = pt[0] >= range[0][0] && pt[0] <= range[0][1] &&
+                  pt[1] >= range[1][0] && pt[1] <= range[1][1];
+          } else {
+            hit = pointInPolygon(pt, range);
+          }
+          if (hit) {
+            var key = data.get('XkeyX', i);
+            if (key !== undefined) selectedKeys.push(String(key));
+          }
+        }
+      });
+    }
+    sel_handle.set(selectedKeys);
+  });
 
+  function pointInPolygon(point, polygon) {
+    var x = point[0], y = point[1];
+    var inside = false;
+    for (var i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+      var xi = polygon[i][0], yi = polygon[i][1];
+      var xj = polygon[j][0], yj = polygon[j][1];
+      var intersect = ((yi > y) != (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+      if (intersect) inside = !inside;
+    }
+    return inside;
+  }
         // Reset keys from brush
         chart.on("brushEnd", function(params) {
           if (params.areas.length === 0) sel_handle.set([]);
@@ -184,7 +230,6 @@ HTMLWidgets.widget({
                   chart.dispatchAction({ type: 'highlight', seriesIndex: h.si, dataIndex: h.matchIdx });
                 }
               });
-
             };
       });
 
