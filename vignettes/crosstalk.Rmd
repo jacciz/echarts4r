@@ -1,5 +1,5 @@
 ---
-title: "crosstalk"
+title: "Crosstalk"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{crosstalk}
@@ -14,15 +14,30 @@ knitr::opts_chunk$set(
 )
 ```
 
-Crosstalk allows two data visuals to 'talk' to one another. To use {crosstalk} in {echarts4r}, add `selectedMode`.
+Crosstalk allows two data visuals to 'talk' to one another. To use {crosstalk} in {echarts4r}, add `selectedMode`. Crosstalk can be used in Markdown and Quarto to add interaction like one would see in Shiny.
 
+WORKS: NULL, cartesian2d, m
+
+Not supported for Web GL and 3-D charts. coord_system = calendar, polar, geo, geo3D, globe etc.
+As of writing this (March-2026) crosstalk seems to be broken in {leaflet}.
+
+Crosstalk is supported for the following chart types:
 -   `e_area()`
 -   `e_bar()`
 -   `e_candle()`
+-   `e_density()`
+-   `e_effect_scatter()`
+-   `e_funnel()`
+-   `e_heatmap()`
+-   `e_histogram()`
 -   `e_line()`
+-   `e_pictorial()`
+-   `e_pie()`
+-   `e_scatter()`
 -   `e_step()`
 
-Crosstalk works with timeline and grouped data.
+Crosstalk works with timeline and grouped data. Working with grouped data, the keys have to be set to the group.
+
 
 ```{r setup}
 library(echarts4r)
@@ -46,4 +61,28 @@ bscols(
 )
 ```
 
-Working with grouped data, the keys have to be set to the group.
+```{r}
+sd <- USArrests |> tibble::rownames_to_column("State") |> SharedData$new()
+
+bscols(
+  sd |>
+    e_charts(State) |>
+    e_scatter(Murder, name = "Start", step = "start", fill = TRUE, selectedMode = 'single',
+           blur = list(
+             itemStyle = list(
+               opacity = 0.3          # dim non-selected bars strongly
+             ))),
+    sd |>
+    e_charts(State) |>
+    e_bar(Murder, name = "Start", step = "start", fill = TRUE, selectedMode = 'single',
+           blur = list(
+             itemStyle = list(
+               opacity = 0.3          # dim non-selected bars strongly
+             ))),
+  datatable(sd, extensions="Scroller", style="bootstrap", class="compact", width="100%",
+            options=list(deferRender=TRUE, scrollY=300, scroller=TRUE))
+)
+```
+
+
+

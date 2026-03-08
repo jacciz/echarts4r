@@ -32,7 +32,7 @@ e_bar_ <- function(
       grp_val <- names(e$x$data)[i]
       id <- if (!is.null(e$x$crosstalk_grpvar)) paste0("Xtalk_", grp_val) else "Xtalk"
       e_serie$datasetId <- id
-      # e_serie$data <- NULL
+      e_serie$data <- NULL
       e_serie$encode <- list(x = e$x$mapping$x, y = serie)
     }
 
@@ -2158,6 +2158,14 @@ e_pictorial_ <- function(e, serie, symbol, bind = NULL, name = NULL, legend = TR
 
     serie_data <- list(data = vector)
 
+    if (!is.null(e$x$settings$crosstalk_group) && !isTRUE(e$x$tl)) {
+      grp_val <- names(e$x$data)[i]
+      id <- if (!is.null(e$x$crosstalk_grpvar)) paste0("Xtalk_", grp_val) else "Xtalk"
+      serie_data$datasetId <- id
+      serie_data$data <- NULL
+      serie_data$encode <- list(x = e$x$mapping$x, y = serie)
+    }
+
     serie_opts <- list(
       name = name,
       type = "pictorialBar",
@@ -2237,6 +2245,14 @@ e_histogram_ <- function(
     }
 
     serie_data <- list(data = hist)
+
+    if (!is.null(e$x$settings$crosstalk_group) && !isTRUE(e$x$tl)) {
+      grp_val <- names(e$x$data)[i]
+      id <- if (!is.null(e$x$crosstalk_grpvar)) paste0("Xtalk_", grp_val) else "Xtalk"
+      serie_data$datasetId <- id
+      serie_data$data <- NULL
+      serie_data$encode <- list(x = e$x$mapping$x, y = serie)
+    }
 
     serie_opts <- list(
       name = name,
@@ -2335,6 +2351,14 @@ e_density_ <- function(
     }
 
     serie_data <- list(data = hist)
+
+    if (!is.null(e$x$settings$crosstalk_group) && !isTRUE(e$x$tl)) {
+      grp_val <- names(e$x$data)[i]
+      id <- if (!is.null(e$x$crosstalk_grpvar)) paste0("Xtalk_", grp_val) else "Xtalk"
+      serie_data$datasetId <- id
+      serie_data$data <- NULL
+      serie_data$encode <- list(x = e$x$mapping$x, y = serie)
+    }
 
     serie_opts <- list(
       name = name,
