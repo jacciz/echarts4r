@@ -175,12 +175,10 @@ test_that("e_data contains crosstalk data in correct format", {
 })
 
 test_that("e_data contains crosstalk data in correct format for grouped data", {
-  sd <- crosstalk::SharedData$new(mtcars, key = ~rownames(mtcars))
   sd_chart <- mtcars |>
     dplyr::group_by(cyl) |>
     crosstalk::SharedData$new(
-      key =  ~rownames(mtcars),
-      group = sd_full$groupName()
+      key =  ~rownames(mtcars)
     )
   e <- sd_chart |>
     e_charts(hp) |>

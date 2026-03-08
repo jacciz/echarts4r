@@ -14,14 +14,12 @@ knitr::opts_chunk$set(
 )
 ```
 
-Crosstalk allows two data visuals to 'talk' to one another. To use {crosstalk} in {echarts4r}, add `selectedMode`. Crosstalk can be used in Markdown and Quarto to add interaction like one would see in Shiny.
+{crosstalk} allows for interactive filtering of data across multiple widgets without requiring a Shiny server. Crosstalk integration in {echarts4r} enables linked brushing and filtering between echarts charts and other crosstalk-compatible widgets such as DT tables and Leaflet maps.
 
-WORKS: NULL, cartesian2d, m
-
-Not supported for Web GL and 3-D charts. coord_system = calendar, polar, geo, geo3D, globe etc.
-As of writing this (March-2026) crosstalk seems to be broken in {leaflet}.
+Crosstalk can be used in Markdown and Quarto to add interaction like one would see in Shiny.
 
 Crosstalk is supported for the following chart types:
+
 -   `e_area()`
 -   `e_bar()`
 -   `e_candle()`
@@ -36,30 +34,98 @@ Crosstalk is supported for the following chart types:
 -   `e_scatter()`
 -   `e_step()`
 
-Crosstalk works with timeline and grouped data. Working with grouped data, the keys have to be set to the group.
+Of these chart types, cartesian2d and no coordinate system are supported while timeline is also supported. Data requiring crosstalk functionality must be used in `e_charts().` Functions that add data to an echart (such as `e_add()`) is not supported. 
 
+This integration has not been tested in Shiny.
+
+## How it Works
+
+Charts are linked via a shared SharedData object.
+
+will highlight or filter in response to selections made in other widgets, and selections made on an echarts chart — via click or brush — will propagate to linked widgets.
+
+
+## Example
+To use {crosstalk} in {echarts4r}, add `selectedMode` argument. This can be `TRUE` or one of  `single`, `multiple` or `series`. 
 
 ```{r setup}
 library(echarts4r)
 library(crosstalk)
+library(dplyr)
 library(DT)
+library(htmltools)
 
 sd <- SharedData$new(mtcars |> tibble::rownames_to_column("model"))
+
+# Yes, it's a linked object
+crosstalk::is.SharedData(sd)
 
 bscols(
   sd |>
     e_charts(model) |>
-    e_bar_("mpg",     selectedMode = "single",
+    e_bar_("mpg",     selectedMode = TRUE),
+  datatable(sd, class="compact", width="100%")
+)
+```
+
+Let's add more style to make highlight more obvious. Much better!
+
+```{r}
+bscols(
+  sd |>
+    e_charts(model) |>
+    e_bar_("mpg", selectedMode = "single",
            emphasis = list(
-             focus='self', blurScope='series'
+             focus='self'
            ),
            blur = list(
              itemStyle = list(
                opacity = 0.3
              ))) |> e_brush(),
-  datatable(sd)
+  datatable(sd, class="compact", width="100%")
 )
 ```
+
+
+
+## With Grouped Data
+
+Grouping data must be done before a SharedData object is created. Furthermore, `key` argument must be used - `key` must be a unique id.
+
+```{r}
+# This data set, each row represents a vehicle name, so can be used as a key
+sdf <- mtcars |>
+  group_by(cyl) |>
+  SharedData$new(key = ~rownames(mtcars))
+
+p <- sdf |> e_charts(hp) |> e_line(mpg,
+    selectedMode = 'multiple',
+    select = list(itemStyle= list(color='magenta')),
+    emphasis = list(focus='self', blurScope='series'),
+    blur= list(itemStyle= list(opacity = 0.3))
+  )
+
+styl <- 'width:50%;display:block;float:left;'
+bscols(
+  list(
+    filter_slider("hp", "Horsepower", sdf, ~hp, width = "100%"),
+    div(style=styl, filter_checkbox("cyl", "Cylinders", sdf, ~cyl, inline=TRUE)),
+    div(style=styl, filter_checkbox("gear", "Gears", sdf, ~gear, inline=TRUE)),
+    filter_select("carb", "Carburetors (select)", sdf, ~carb),
+    datatable(sdf,
+              class="compact", width="100%", height=350,
+              extensions="Scroller", style="bootstrap",
+              options=list(scroller=TRUE, deferRender=TRUE, scrollY=200)
+    )
+  ),
+  list(p)
+)
+```
+
+
+## Crosstalk with Two Charts
+
+When two charts are using crosstalk, selected point(s) are highlighted and non-selected points are downplayed.
 
 ```{r}
 sd <- USArrests |> tibble::rownames_to_column("State") |> SharedData$new()
@@ -67,22 +133,54 @@ sd <- USArrests |> tibble::rownames_to_column("State") |> SharedData$new()
 bscols(
   sd |>
     e_charts(State) |>
-    e_scatter(Murder, name = "Start", step = "start", fill = TRUE, selectedMode = 'single',
+    e_scatter(Murder, selectedMode = 'multiple',
+                     emphasis = list(
+             focus='self'
+           ),
            blur = list(
              itemStyle = list(
-               opacity = 0.3          # dim non-selected bars strongly
+               opacity = 0.3 
              ))),
     sd |>
     e_charts(State) |>
-    e_bar(Murder, name = "Start", step = "start", fill = TRUE, selectedMode = 'single',
+    e_bar(Murder, selectedMode = 'single',
+            emphasis = list(
+             focus='self'
+           ),
            blur = list(
              itemStyle = list(
-               opacity = 0.3          # dim non-selected bars strongly
+               opacity = 0.3
              ))),
-  datatable(sd, extensions="Scroller", style="bootstrap", class="compact", width="100%",
-            options=list(deferRender=TRUE, scrollY=300, scroller=TRUE))
+  datatable(sd, class="compact", width="100%")
 )
 ```
+
+## Timeline
+```{r}
+grouped_sd <- iris |>
+  distinct(Species, .keep_all = TRUE) |> 
+  dplyr::group_by(Species) |>
+  SharedData$new(key = ~Species)
+
+bscols(
+  grouped_sd |> e_chart(Species, timeline = TRUE) |>
+  e_bar_("Sepal.Length", selectedMode = "single",            blur = list(
+    itemStyle = list(
+      opacity = 0.3
+    ))
+  ),
+  grouped_sd |> e_chart(Species, timeline = TRUE) |>
+  e_bar_("Sepal.Length", selectedMode = "single",            blur = list(
+    itemStyle = list(
+      opacity = 0.3
+    ))
+  ),
+  datatable(grouped_sd, extensions="Scroller", style="bootstrap", class="compact", width="100%",
+            options=list(deferRender=TRUE, scrollY=300, scroller=TRUE))
+)
+
+```
+
 
 
 
