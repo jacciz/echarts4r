@@ -127,10 +127,9 @@ e_charts.default <- function(
     ct_key   <- data$key() |> as.character()
     ct_group <- data$groupName()
 
-    isCrosstalk =TRUE
+    isCrosstalk = TRUE
 
     # origData() returns wrong thing on grouped SharedData
-    # get the full data by ungrouping first
     data <- (data$origData())
     data$XkeyX <- ct_key  # add key column
     isGroupedData <- dplyr::is.grouped_df(data)
@@ -169,12 +168,12 @@ e_charts.default <- function(
   }
 
   # Start crosstalk -------------------------------------------------------
-  # First, I'll acknowledge{echarty} and helgasoft for guidance on how to implement
+  # First, I'll acknowledge {echarty} for guidance on how to implement
   # this. https://github.com/helgasoft/echarty/
 
   # Crosstalk works by adding a column called 'XkeyX' so each row (i.e. data
   # point) will have a unique key. e$x$settings contains crosstalk_key and
-  # crosstalk_group - assigned by crosstalk, unless specified
+  # crosstalk_group - assigned by crosstalk, unless specified.
   # e$x$crosstalk_grpvar contains name of group (if any)
 
   # When data is constructed (i.e. in e_line()), each data point will have an
@@ -183,8 +182,6 @@ e_charts.default <- function(
 
   # e$x$opts$dataset[[1]]$source[[1]]$XkeyX
   # e$x$opts$series[[1]]$datasetId
-
-  # Note: timeline uses ct_key
 
   # This will attach dimensions (i.e. colnames) and e$opts$dataset (i.e.)
   # js / crosstalk and the js looks for this column to grab

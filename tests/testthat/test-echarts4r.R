@@ -134,12 +134,72 @@ test_that("e_charts_ sets value x axis for timeline with numeric", {
   expect_true(result$x$mapping$include_x)
 })
 
+
+# e_charts - crosstalk ----------------------------------------------------
+
+test_that("e_charts recognized shared data", {
+  result <- e_charts(data = mtcars, x = mpg)
+
+  expect_equal(result$x$mapping$x, "mpg")
+  expect_equal(result$x$mapping$x_class, "numeric")
+})
+
 # e_data ------------------------------------------------------------------
 
-test_that("e_data grabs data from e_chart when missing", {
-  e <- iris |> e_charts_() |> e_data()
-  data <- e$x$data[[1]]
-  expect_identical(data, iris)
+test_that("e_data contains crosstalk data in correct format", {
+  sd <- crosstalk::SharedData$new(mtcars |> tibble::rownames_to_column("model"))
+  e <- sd |>
+    e_charts(model) |>
+    e_bar_("mpg",     selectedMode = "single",
+           emphasis = list(
+             focus='self', blurScope='series'
+           ),
+           blur = list(
+             itemStyle = list(
+               opacity = 0.3          # dim non-selected bars strongly
+             )))
+
+  data <- e$x$opts$dataset
+  data[[1]]$id
+
+  expect_equal(names(data[[1]]), c("id", "dimensions", "source"))
+  expect_equal(data[[1]]$id, "source")
+  # XkeyX was added
+  expect_equal(data[[1]]$dimensions, c("model", names(mtcars), "XkeyX"))
+  # Last data point has correct key - rownumber
+  expect_equal(data[[1]]$source[[32]][["XkeyX"]], "32")
+
+  expect_true(!is.null(e$x$settings$crosstalk_group))
+  # There are 32 rows - each a different key
+  expect_all_true(e$x$settings$crosstalk_key %in% as.character(1:32))
+})
+
+test_that("e_data contains crosstalk data in correct format for grouped data", {
+  sd <- crosstalk::SharedData$new(mtcars, key = ~rownames(mtcars))
+  sd_chart <- mtcars |>
+    dplyr::group_by(cyl) |>
+    crosstalk::SharedData$new(
+      key =  ~rownames(mtcars),
+      group = sd_full$groupName()
+    )
+  e <- sd_chart |>
+    e_charts(hp) |>
+    e_bar_("mpg", selectedMode = "single")
+
+  data <- e$x$opts$dataset
+  data[[1]]$id
+  e$x$settings
+
+  expect_equal(names(data[[1]]), c("id", "dimensions", "source"))
+  expect_equal(data[[1]]$id, "source")
+  # XkeyX was added
+  expect_equal(data[[1]]$dimensions, c(names(mtcars), "XkeyX"))
+
+  # Last data point has correct key - rownumber
+  # expect_equal(data[[1]]$source[[32]][["XkeyX"]], "32")
+  expect_true(!is.null(e$x$settings$crosstalk_group))
+  # There are 32 rows - each a different car name
+  expect_all_true(e$x$settings$crosstalk_key %in% rownames(mtcars))
 })
 
 # render in shiny -------------------------------------------------------------------

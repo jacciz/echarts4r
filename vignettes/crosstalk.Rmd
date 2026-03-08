@@ -14,6 +14,36 @@ knitr::opts_chunk$set(
 )
 ```
 
+Crosstalk allows two data visuals to 'talk' to one another. To use {crosstalk} in {echarts4r}, add `selectedMode`.
+
+-   `e_area()`
+-   `e_bar()`
+-   `e_candle()`
+-   `e_line()`
+-   `e_step()`
+
+Crosstalk works with timeline and grouped data.
+
 ```{r setup}
 library(echarts4r)
+library(crosstalk)
+library(DT)
+
+sd <- SharedData$new(mtcars |> tibble::rownames_to_column("model"))
+
+bscols(
+  sd |>
+    e_charts(model) |>
+    e_bar_("mpg",     selectedMode = "single",
+           emphasis = list(
+             focus='self', blurScope='series'
+           ),
+           blur = list(
+             itemStyle = list(
+               opacity = 0.3
+             ))) |> e_brush(),
+  datatable(sd)
+)
 ```
+
+Working with grouped data, the keys have to be set to the group.

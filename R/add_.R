@@ -29,12 +29,10 @@ e_bar_ <- function(
     e_serie <- list(data = vector)
 
     if (!is.null(e$x$settings$crosstalk_group) && !isTRUE(e$x$tl)) {
-
       grp_val <- names(e$x$data)[i]
       id <- if (!is.null(e$x$crosstalk_grpvar)) paste0("Xtalk_", grp_val) else "Xtalk"
-
       e_serie$datasetId <- id
-      e_serie$data <- NULL
+      # e_serie$data <- NULL
       e_serie$encode <- list(x = e$x$mapping$x, y = serie)
     }
 
@@ -144,10 +142,8 @@ e_line_ <- function(
     )
 
     if (!is.null(e$x$settings$crosstalk_group) && !isTRUE(e$x$tl)) {
-
       grp_val <- names(e$x$data)[i]
       id <- if (!is.null(e$x$crosstalk_grpvar)) paste0("Xtalk_", grp_val) else "Xtalk"
-
       l$datasetId <- id
       l$data <- NULL
       l$encode <- list(x = e$x$mapping$x, y = serie)
@@ -257,6 +253,14 @@ e_area_ <- function(
       data = vector
     )
 
+    if (!is.null(e$x$settings$crosstalk_group) && !isTRUE(e$x$tl)) {
+      grp_val <- names(e$x$data)[i]
+      id <- if (!is.null(e$x$crosstalk_grpvar)) paste0("Xtalk_", grp_val) else "Xtalk"
+      l$datasetId <- id
+      l$data <- NULL
+      l$encode <- list(x = e$x$mapping$x, y = serie)
+    }
+
     if (coord_system == "cartesian2d") {
       if (y_index != 0) {
         e <- .set_y_axis(e, serie, y_index, i)
@@ -361,6 +365,14 @@ e_step_ <- function(
     l <- list(
       data = vector
     )
+    if (!is.null(e$x$settings$crosstalk_group) && !isTRUE(e$x$tl)) {
+      grp_val <- names(e$x$data)[i]
+      id <- if (!is.null(e$x$crosstalk_grpvar)) paste0("Xtalk_", grp_val) else "Xtalk"
+      l$datasetId <- id
+      l$data <- NULL
+      l$encode <- list(x = e$x$mapping$x, y = serie)
+    }
+
 
     if (coord_system == "cartesian2d") {
       if (y_index != 0) {
@@ -503,6 +515,14 @@ e_scatter_ <- function(
 
     e.serie <- list(data = xy)
 
+    if (!is.null(e$x$settings$crosstalk_group) && !isTRUE(e$x$tl)) {
+      grp_val <- names(e$x$data)[i]
+      id <- if (!is.null(e$x$crosstalk_grpvar)) paste0("Xtalk_", grp_val) else "Xtalk"
+      e.serie$datasetId <- id
+      e.serie$data <- NULL
+      e.serie$encode <- list(x = e$x$mapping$x, y = serie)
+    }
+
     if (coord_system == "polar") {
       e.serie$data <- e$x$data[[i]] |>
         dplyr::select(dplyr::all_of(serie)) |>
@@ -640,6 +660,15 @@ e_effect_scatter_ <- function(
 
     e.serie <- list(data = xy)
 
+    if (!is.null(e$x$settings$crosstalk_group) && !isTRUE(e$x$tl)) {
+      grp_val <- names(e$x$data)[i]
+      id <- if (!is.null(e$x$crosstalk_grpvar)) paste0("Xtalk_", grp_val) else "Xtalk"
+      e.serie$datasetId <- id
+      e.serie$data <- NULL
+      e.serie$encode <- list(x = e$x$mapping$x, y = serie)
+    }
+
+
     if (coord_system == "polar") {
       e.serie$data <- e$x$data[[i]] |>
         dplyr::select(dplyr::all_of(serie)) |>
@@ -745,6 +774,13 @@ e_candle_ <- function(e, opening, closing, low, high, bind = NULL, name = "candl
     e.serie <- list(
       data = data
     )
+
+    if (!is.null(e$x$settings$crosstalk_group) && !isTRUE(e$x$tl)) {
+      grp_val <- names(e$x$data)[i]
+      id <- if (!is.null(e$x$crosstalk_grpvar)) paste0("Xtalk_", grp_val) else "Xtalk"
+      e.serie$datasetId <- id
+      e.serie$data <- NULL
+    }
 
     if (!e$x$tl) {
       nm <- .name_it(e, NULL, name, i)
@@ -870,6 +906,13 @@ e_funnel_ <- function(e, values, labels, name = NULL, legend = TRUE, rm_x = TRUE
 
     serie <- list(data = funnel)
 
+    if (!is.null(e$x$settings$crosstalk_group) && !isTRUE(e$x$tl)) {
+      grp_val <- names(e$x$data)[i]
+      id <- if (!is.null(e$x$crosstalk_grpvar)) paste0("Xtalk_", grp_val) else "Xtalk"
+      serie$datasetId <- id
+      serie$data <- NULL
+    }
+
     opts <- list(
       name = name,
       type = "funnel",
@@ -983,6 +1026,14 @@ e_heatmap_ <- function(
     }
 
     serie <- list(data = xyz)
+
+    if (!is.null(e$x$settings$crosstalk_group) && !isTRUE(e$x$tl)) {
+      grp_val <- names(e$x$data)[i]
+      id <- if (!is.null(e$x$crosstalk_grpvar)) paste0("Xtalk_", grp_val) else "Xtalk"
+      serie$datasetId <- id
+      serie$data <- NULL
+      serie$encode <- list(x = e$x$mapping$x, y = y)
+    }
 
     series_opts <- list(
       name = name,
@@ -1126,6 +1177,14 @@ e_pie_ <- function(e, serie, name = NULL, legend = TRUE,  coord_system = "", rm_
     data <- .add_bind2(e, data, e$x$mapping$x, i = i)
 
     serie_data <- list(data = data)
+
+    if (!is.null(e$x$settings$crosstalk_group) && !isTRUE(e$x$tl)) {
+      grp_val <- names(e$x$data)[i]
+      id <- if (!is.null(e$x$crosstalk_grpvar)) paste0("Xtalk_", grp_val) else "Xtalk"
+      serie_data$datasetId <- id
+      serie_data$data <- NULL
+      serie_data$encode <- list(x = e$x$mapping$x, y = serie)
+    }
 
     serie_opts <- list(
       name = name,
