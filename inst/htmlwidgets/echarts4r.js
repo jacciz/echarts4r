@@ -97,8 +97,8 @@ HTMLWidgets.widget({
 
       	sel_handle.setGroup(x.settings.crosstalk_group);
       	ct_filter.setGroup(x.settings.crosstalk_group);
-sel_handle.akeys = x.settings.crosstalk_key;  // marks sender as chart
-      	  // store all keys on chart for lookup
+
+      	// store all keys on chart for lookup
         chart.akeys = x.settings.crosstalk_key;
 
         // store original timeline options for filter/highlight.
@@ -176,7 +176,6 @@ sel_handle.akeys = x.settings.crosstalk_key;  // marks sender as chart
         });
 
       // Keys from echarts to crosstalk
-       // click → crosstalk outbound
         chart.on("selectchanged", function(keys) {
           if (!keys.isFromClick) return;
           var selectedKeys = [];

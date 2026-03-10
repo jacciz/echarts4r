@@ -15,15 +15,17 @@ echarts_build <- function(e) {
 #'
 #' Initialise a chart.
 #'
-#' @param data A \code{data.frame}.
+#' @param data A \code{data.frame} or a crosstalk  \code{SharedData} object
 #' @param e An object of class \code{echarts4r} as returned by \code{e_charts}.
 #' @param x Column name containing x axis.
-#' @param draw Whether to draw the chart, intended to be used with \code{\link{e_draw_p}}.
+#' @param draw Whether to draw the chart, intended to be used with
+#'   \code{\link{e_draw_p}}.
 #' @param width,height Must be a valid CSS unit (like \code{'100\%'},
 #'   \code{'400px'}, \code{'auto'}) or a number, which will be coerced to a
 #'   string and have \code{'px'} appended.
 #' @param elementId Id of element.
-#' @param dispose Set to \code{TRUE} to force redraw of chart, set to \code{FALSE} to update.
+#' @param dispose Set to \code{TRUE} to force redraw of chart, set to
+#'   \code{FALSE} to update.
 #' @param renderer Renderer, takes \code{canvas} (default) or \code{svg}.
 #' @param timeline Set to \code{TRUE} to build a timeline, see timeline section.
 #' @param ... Any other argument.
@@ -68,11 +70,35 @@ echarts_build <- function(e) {
 #'   \item{\code{\link{e_line_3d}}}
 #'   \item{\code{\link{e_gauge}}}
 #' }
+#' @section Crosstalk: TO use crosstalk, pass \code{selectedMode = TRUE}) into
+#'   the chart type argument. crosstalk functionality currently supports the
+#'   following chart types (but only cartesion2d):
+#' \itemize{
+#'   \item{\code{\link{e_area}}}
+#'   \item{\code{\link{e_bar}}}
+#'   \item{\code{\link{e_candle}}}
+#'   \item{\code{\link{e_density}}}
+#'   \item{\code{\link{e_effect_scatter}}}
+#'   \item{\code{\link{e_funnel}}}
+#'   \item{\code{\link{e_heatmap}}}
+#'   \item{\code{\link{e_histogram}}}
+#'   \item{\code{\link{e_line}}}
+#'   \item{\code{\link{e_pictorial}}}
+#'   \item{\code{\link{e_pie}}}
+#'   \item{\code{\link{e_scatter}}}
+#'   \item{\code{\link{e_step}}}
+#' }
 #'
 #' @examples
 #' mtcars |>
 #'   e_charts(qsec) |>
 #'   e_line(mpg)
+#'
+#' sd <- crosstalk::SharedData$new(mtcars)
+#' mtcars |>
+#'   e_charts(qsec) |>
+#'   e_line(mpg, selectedMode = TRUE)
+#'
 #' @import htmlwidgets
 #' @importFrom grDevices boxplot.stats
 #' @importFrom grDevices colorRampPalette

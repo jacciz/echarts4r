@@ -1,15 +1,3 @@
-# didnt work for e_radar_, parallel
-
-if (!is.null(e$x$settings$crosstalk_group) && !isTRUE(e$x$tl)) {
-  grp_val <- names(e$x$data)[i]
-  id <- if (!is.null(e$x$crosstalk_grpvar)) paste0("Xtalk_", grp_val) else "Xtalk"
-  l$datasetId <- id
-  l$data <- NULL
-  l$encode <- list(x = e$x$mapping$x, y = serie)
-}
-e_serie$encode <- list(x = e$x$mapping$x, y = e$x$mapping$y, z = serie, XkeyX = "XkeyX")
-
-
 # e_area_ -----------------------------------------------------------------
 sd <- CO2 |>
   group_by(Plant) |> SharedData$new()
@@ -248,11 +236,11 @@ bscols(
 #
 # # ??
 # df <- flights |> SharedData$new()
+# bscols(
 #   df |> e_charts() |>
-#   e_globe(
-#     displacementScale = 0.05
+#     e_geo(
 #   ) |>
-#   e_lines_3d(
+#   e_lines(
 #     start_lon,
 #     start_lat,
 #     end_lon,
@@ -261,7 +249,9 @@ bscols(
 #     effect = list(show = TRUE),
 #     selectedMode = "multiple"
 #   ) |>
-#   e_legend(FALSE)
+#   e_legend(FALSE),
+#   datatable(df)
+# )
 #
 # bscols(
 # df |>
