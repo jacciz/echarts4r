@@ -1,6 +1,6 @@
 # echarts4r 0.5.1
 
-- Added crosstalk capability to `e_bar()`, `e_line()` and 11 other chart types [#21](https://github.com/JohnCoene/echarts4r/issues/21)
+- Added crosstalk capability to `e_bar()`, `e_line()` and 11 other chart types [#214](https://github.com/JohnCoene/echarts4r/issues/214)
 
 # echarts4r 0.5.0
 
