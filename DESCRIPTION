@@ -24,6 +24,7 @@ Imports:
   cli,
   dplyr (>= 0.7.0),
   purrr,
+  crosstalk,
   countrycode,
   broom,
   rlang,
