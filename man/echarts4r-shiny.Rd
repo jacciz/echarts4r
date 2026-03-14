@@ -46,7 +46,7 @@ is useful if you want to save an expression in a variable.}
 
 \item{id}{Target chart id.}
 
-\item{data}{A \code{data.frame}.}
+\item{data}{A \code{data.frame} or a crosstalk  \code{SharedData} object}
 
 \item{x}{Column name containing x axis.}
 

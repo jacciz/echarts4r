@@ -83,7 +83,7 @@ e_chart(
 e_data(e, data, x)
 }
 \arguments{
-\item{data}{A \code{data.frame}.}
+\item{data}{A \code{data.frame} or a crosstalk  \code{SharedData} object}
 
 \item{x}{Column name containing x axis.}
 
@@ -93,9 +93,11 @@ string and have \code{'px'} appended.}
 
 \item{elementId}{Id of element.}
 
-\item{dispose}{Set to \code{TRUE} to force redraw of chart, set to \code{FALSE} to update.}
+\item{dispose}{Set to \code{TRUE} to force redraw of chart, set to
+\code{FALSE} to update.}
 
-\item{draw}{Whether to draw the chart, intended to be used with \code{\link{e_draw_p}}.}
+\item{draw}{Whether to draw the chart, intended to be used with
+\code{\link{e_draw_p}}.}
 
 \item{renderer}{Renderer, takes \code{canvas} (default) or \code{svg}.}
 
@@ -154,10 +156,37 @@ Initialise a chart.
 }
 }
 
+\section{Crosstalk}{
+ TO use crosstalk, pass \code{selectedMode = TRUE}) into
+  the chart type argument. crosstalk functionality currently supports the
+  following chart types (but only cartesion2d):
+\itemize{
+  \item{\code{\link{e_area}}}
+  \item{\code{\link{e_bar}}}
+  \item{\code{\link{e_candle}}}
+  \item{\code{\link{e_density}}}
+  \item{\code{\link{e_effect_scatter}}}
+  \item{\code{\link{e_funnel}}}
+  \item{\code{\link{e_heatmap}}}
+  \item{\code{\link{e_histogram}}}
+  \item{\code{\link{e_line}}}
+  \item{\code{\link{e_pictorial}}}
+  \item{\code{\link{e_pie}}}
+  \item{\code{\link{e_scatter}}}
+  \item{\code{\link{e_step}}}
+}
+}
+
 \examples{
 mtcars |>
   e_charts(qsec) |>
   e_line(mpg)
+
+sd <- crosstalk::SharedData$new(mtcars)
+mtcars |>
+  e_charts(qsec) |>
+  e_line(mpg, selectedMode = TRUE)
+
 points <- mtcars[1:3, ]
 mtcars |>
   e_charts_("qsec") |>
