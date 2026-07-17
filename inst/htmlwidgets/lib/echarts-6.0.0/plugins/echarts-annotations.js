@@ -39,6 +39,12 @@
       var svg = document.getElementById(svgId);
 
       if (!svg) {
+        // el must be the containing block for the absolutely-positioned
+        // overlay; in Shiny the output div is position:static by default
+        if (getComputedStyle(el).position === 'static') {
+          el.style.position = 'relative';
+        }
+
         svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.setAttribute('id', svgId);
         svg.style.position = 'absolute';
@@ -177,6 +183,16 @@
       return id;
     },
 
+    // Keep the annotation box inside the grid rect (render-time and drag-time)
+    clampBoxToGrid: function(x, y, annotation, grid) {
+      var s = annotation.rectShape;
+      if (x + s.x < 0) x = -s.x;
+      else if (x + s.x + s.width > grid.width) x = grid.width - s.x - s.width;
+      if (y + s.y < 0) y = -s.y;
+      else if (y + s.y + s.height > grid.height) y = grid.height - s.y - s.height;
+      return [x, y];
+    },
+
     calculateAnnotationPosition: function (el, annotation, chart, index, grids, gridIndex) {
       var grid = grids[gridIndex];
       var containerPixel = chart.convertToPixel(
@@ -185,6 +201,12 @@
       );
 
       if (!containerPixel || containerPixel.length !== 2) {
+        return null;
+      }
+
+      // anchor is outside the current zoom window — don't render;
+      // it comes back automatically when the window includes it again
+      if (!chart.containPixel({gridIndex: gridIndex}, containerPixel)) {
         return null;
       }
 
@@ -210,10 +232,15 @@
       var annoData = el._annotationData[index];
       annoData.box_id = 'box-group-' + index;
 
-      var boxPos = [
+      // Clamp at render time only — do NOT write the clamped values back
+      // into annoData.offsetX/Y, so the user's placement is restored when
+      // the grid grows again (zoom out / window widened)
+      var boxPos = this.clampBoxToGrid(
         anchorPos[0] + annoData.offsetX,
-        anchorPos[1] + annoData.offsetY
-      ];
+        anchorPos[1] + annoData.offsetY,
+        annotation,
+        grid
+      );
 
       var isAbove = boxPos[1] < anchorPos[1];
       var boxEdge = isAbove
@@ -340,18 +367,19 @@
 
           var gridIndex = ann.gridIndex || 0;
           var svg = svgs[gridIndex];
-          var group = svg.querySelector('#annotations-group-' + gridIndex);
+          var group = svg ? svg.querySelector('#annotations-group-' + gridIndex) : null;
 
           // CHECK VISIBILITY AGAINST LEGEND
           var legendName = ann.legend_name || 'Annotation';
           var isVisible = annotationVisibility[legendName] !== false;
-          var gridIndex = ann.gridIndex || 0;
-          if (!isVisible || !grids[gridIndex]) {
+          if (!isVisible || !grids[gridIndex] || !group) {
             return;
           }
 
-          // Calculate annotation position
+          // Calculate annotation position (null = anchor outside zoom window)
           var annoPos = self.calculateAnnotationPosition(el, ann, chart, index, grids, gridIndex);
+
+          if (!annoPos) return;
 
           // ann.lineStyle, etc. is a list from R. These create the SVG element and apply styling.
           var rect = self.createSVGElement('rect', ann.rectStyle);
@@ -410,8 +438,8 @@
             rect.setAttribute('filter', 'url(#' + filterId + ')');
           }
 
-          // Check if this annotation is draggable
-          var isDraggable = ann.draggable;  // Default to true
+          // Check if this annotation is draggable (default true when omitted)
+          var isDraggable = ann.draggable !== false;
 
           if (isDraggable) {
             rect.style.cursor = 'move';
@@ -423,8 +451,6 @@
             rect.setAttribute('data-draggable', 'false');
           }
 
-          rect.style.cursor = 'move';
-          rect.style.pointerEvents = 'all';
           rect.setAttribute('data-index', index);
           rect.setAttribute('data-grid', gridIndex);
 
@@ -465,17 +491,39 @@
         });
       }
 
+      // Expose this render's state for the once-attached global handlers.
+      // Re-renders overwrite this, so the handlers always see fresh state.
+      el._anno = {
+        update: updateAnnotations,
+        linesByGrid: linesByGrid,
+        grids: grids,
+        svgs: svgs
+      };
+
       setTimeout(updateAnnotations, ANNOTATION_UPDATE_DELAY);
 
-// Annos will update on ...
-      chart.on('dataZoom', updateAnnotations);
-      chart.on('timelinechanged', updateAnnotations);
-      chart.on('restore', updateAnnotations);
+// CHART EVENTS — off/on so Shiny re-renders don't stack handlers
+      if (el._annoHandlers) {
+        chart.off('dataZoom', el._annoHandlers.zoom);
+        chart.off('timelinechanged', el._annoHandlers.timeline);
+        chart.off('restore', el._annoHandlers.restore);
+        chart.off('legendselectchanged', el._annoHandlers.legend);
+        chart.off('finished', el._annoHandlers.finished);
+      }
 
-// ADD LEGEND HANDLER
-      chart.on('legendselectchanged', function(params) {
-          const clicked = params.name;
-          const isOn = params.selected[clicked];
+      el._annoHandlers = {
+        zoom: updateAnnotations,
+        timeline: updateAnnotations,
+        restore: updateAnnotations,
+        finished: function() {
+          clearTimeout(el._annoFinishedTimeout);
+          el._annoFinishedTimeout = setTimeout(function() {
+            if (el._anno) el._anno.update();
+          }, 50);
+        },
+        legend: function(params) {
+          var clicked = params.name;
+          var isOn = params.selected[clicked];
 
           var isAnnotationLegend = annotations.some(function (ann) {
             return ann.legend_name === clicked;
@@ -486,40 +534,50 @@
             updateAnnotations();
           } else {
             // Wait for chart to finish rescaling, then update annotations
-            setTimeout(function() {
-              updateAnnotations();
-             }, LEGEND_INIT_DELAY);
+            setTimeout(updateAnnotations, LEGEND_INIT_DELAY);
           }
-      });
-
-      // Resize observer
-      if (!el._resizeHandlerAttached) {
-        if (typeof ResizeObserver !== 'undefined') {
-          var resizeObserver = new ResizeObserver(function(entries) {
-            clearTimeout(el._resizeTimeout);
-            el._resizeTimeout = setTimeout(function() {
-              chart.resize();
-              setTimeout(updateAnnotations, DEBOUNCE_DELAY);
-            }, RESIZE_DEBOUNCE);
-          });
-          resizeObserver.observe(el);
         }
-        el._resizeHandlerAttached = true;
+
+      };
+
+      chart.on('dataZoom', el._annoHandlers.zoom);
+      chart.on('timelinechanged', el._annoHandlers.timeline);
+      chart.on('restore', el._annoHandlers.restore);
+      chart.on('legendselectchanged', el._annoHandlers.legend);
+      chart.on('finished', el._annoHandlers.finished);
+
+// RESIZE — single observer, attached once, delegates through el._anno
+      if (!el._annoResizeObserver && typeof ResizeObserver !== 'undefined') {
+        el._annoResizeObserver = new ResizeObserver(function() {
+          clearTimeout(el._annoResizeTimeout);
+          el._annoResizeTimeout = setTimeout(function() {
+            var c = echarts.getInstanceByDom(el); // re-fetch, don't close over
+            if (c && el._anno) c.resize();   // repaint → 'finished' → update
+          }, RESIZE_DEBOUNCE);
+        });
+        el._annoResizeObserver.observe(el);
       }
 
-// Event listeners //
+// DRAG — attached once per element; reads current state via el._anno
+      if (!el._annoDragAttached) {
+        el._annoDragAttached = true;
 
-      // DRAG STATE
-      var isDragging = false;
-      var currentDrag = null;
+        var dragState = { dragging: false, current: null };
 
-      // MOUSEDOWN
-      document.addEventListener('mousedown', function(e) {
-        if (e.target.tagName === 'rect' && e.target.getAttribute('data-draggable') === 'true') {
+        // MOUSEDOWN
+        document.addEventListener('mousedown', function(e) {
+          if (e.target.tagName !== 'rect' ||
+              e.target.getAttribute('data-draggable') !== 'true' ||
+              !el.contains(e.target) ||
+              !el._anno) {
+            return;
+          }
+
           var annIndex = parseInt(e.target.getAttribute('data-index'));
           var gridIdx = parseInt(e.target.getAttribute('data-grid'));
 
-          var lineData = linesByGrid[gridIdx] ? linesByGrid[gridIdx].find(function(l) {
+          var lines = el._anno.linesByGrid[gridIdx];
+          var lineData = lines ? lines.find(function(l) {
             return l.index === annIndex;
           }) : null;
 
@@ -527,7 +585,7 @@
             return;
           }
 
-          var svg = svgs[gridIdx];
+          var svg = el._anno.svgs[gridIdx];
           var svgRect = svg.getBoundingClientRect();
           var boxGroup = lineData.boxGroup;
 
@@ -536,8 +594,8 @@
           var currentX = parseFloat(match[1]);
           var currentY = parseFloat(match[2]);
 
-          isDragging = true;
-          currentDrag = {
+          dragState.dragging = true;
+          dragState.current = {
             boxGroup: boxGroup,
             lineData: lineData,
             gridIndex: gridIdx,
@@ -549,69 +607,54 @@
 
           e.preventDefault();
           e.stopPropagation();
-        }
-      });
+        });
 
-      // MOUSEMOVE - add a bounding box.
-      document.addEventListener('mousemove', function(e) {
-        if (!isDragging || !currentDrag) return;
+        // MOUSEMOVE — clamp the box to the grid while dragging
+        document.addEventListener('mousemove', function(e) {
+          if (!dragState.dragging || !dragState.current || !el._anno) return;
 
-        var svgRect = currentDrag.svg.getBoundingClientRect();
-        var grid = grids[currentDrag.gridIndex];
-        var ann = currentDrag.lineData.ann;
+          var cur = dragState.current;
+          var svgRect = cur.svg.getBoundingClientRect();
+          var grid = el._anno.grids[cur.gridIndex];
+          var ann = cur.lineData.ann;
 
-        var desiredX = e.clientX - svgRect.left - currentDrag.startX;
-        var desiredY = e.clientY - svgRect.top - currentDrag.startY;
+          var desiredX = e.clientX - svgRect.left - cur.startX;
+          var desiredY = e.clientY - svgRect.top - cur.startY;
 
-        var boxLeft = desiredX + ann.rectShape.x;
-        var boxRight = desiredX + ann.rectShape.x + ann.rectShape.width;
-        var boxTop = desiredY + ann.rectShape.y;
-        var boxBottom = desiredY + ann.rectShape.y + ann.rectShape.height;
+          var clamped = self.clampBoxToGrid(desiredX, desiredY, ann, grid);
+          var newX = clamped[0], newY = clamped[1];
 
-        var newX = desiredX;
-        var newY = desiredY;
+          cur.boxGroup.setAttribute('transform', 'translate(' + newX + ',' + newY + ')');
 
-        if (boxLeft < 0) {
-          newX = -ann.rectShape.x;
-        } else if (boxRight > grid.width) {
-          newX = grid.width - ann.rectShape.x - ann.rectShape.width;
-        }
+          var isAbove = newY < cur.lineData.anchorPos[1];
+          var boxEdge = isAbove ?
+            ann.rectShape.y + ann.rectShape.height :
+            ann.rectShape.y;
 
-        if (boxTop < 0) {
-          newY = -ann.rectShape.y;
-        } else if (boxBottom > grid.height) {
-          newY = grid.height - ann.rectShape.y - ann.rectShape.height;
-        }
+          cur.lineData.line.setAttribute('x2', newX);
+          cur.lineData.line.setAttribute('y2', newY + boxEdge);
 
-        currentDrag.boxGroup.setAttribute('transform', 'translate(' + newX + ',' + newY + ')');
+          el._annotationData[cur.annIndex].offsetX = newX - cur.lineData.anchorPos[0];
+          el._annotationData[cur.annIndex].offsetY = newY - cur.lineData.anchorPos[1];
 
-        var isAbove = newY < currentDrag.lineData.anchorPos[1];
-        var boxEdge = isAbove ?
-          ann.rectShape.y + ann.rectShape.height :
-          ann.rectShape.y;
+          e.preventDefault();
+        });
 
-        currentDrag.lineData.line.setAttribute('x2', newX);
-        currentDrag.lineData.line.setAttribute('y2', newY + boxEdge);
+        // MOUSEUP
+        document.addEventListener('mouseup', function(e) {
+          if (!dragState.dragging) return;
 
-        el._annotationData[currentDrag.annIndex].offsetX = newX - currentDrag.lineData.anchorPos[0];
-        el._annotationData[currentDrag.annIndex].offsetY = newY - currentDrag.lineData.anchorPos[1];
-
-        e.preventDefault();
-      });
-
-      // MOUSEUP
-      document.addEventListener('mouseup', function(e) {
-        if (isDragging) {
-          if (typeof Shiny !== 'undefined') {
+          if (typeof Shiny !== 'undefined' && dragState.current) {
             Shiny.onInputChange(
               el.id + '_dragged_annotation' + ':echarts4rParse',
-              el._annotationData[currentDrag.annIndex]
+              el._annotationData[dragState.current.annIndex]
             );
           }
-          isDragging = false;
-          currentDrag = null;
-        }
-      });
+
+          dragState.dragging = false;
+          dragState.current = null;
+        });
+      }
     }
   };
 })();
