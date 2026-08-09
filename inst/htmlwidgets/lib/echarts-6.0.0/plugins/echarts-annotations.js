@@ -18,17 +18,16 @@
       return el;
     },
 
-    // Helper to remove anno groups
-    clearAllSvgLines: function(svgs) {
-      Object.keys(svgs).forEach(function(gridIndex) {
-        var svg = svgs[gridIndex];
-        if (svg) {
-          var group = svg.querySelector('#annotations-group-' + gridIndex);
-          if (group) {
-            while (group.firstChild) {
-              group.removeChild(group.firstChild);
-            }
-          }
+    // Remove anno groups. Clears based on what's actually in the DOM under
+    // `el`, NOT a passed-in svgs map — on a Shiny re-render `initialize` runs
+    // again with a fresh empty svgs map, but the SVG groups from the previous
+    // render persist in the DOM; clearing the map would miss them and new
+    // elements would stack on top of stale ones.
+    clearAllSvgLines: function(el) {
+      var groups = el.querySelectorAll('[id^="annotations-group-"]');
+      groups.forEach(function(group) {
+        while (group.firstChild) {
+          group.removeChild(group.firstChild);
         }
       });
     },
@@ -272,9 +271,12 @@
       var grids = [];
       var annotationVisibility = {};
 
-      if (!el._annotationData) {
-        el._annotationData = {};
-      }
+      // Reset on every data render: R's annotation data (including any
+      // offsetX/offsetY the app fed back) is the source of truth. Drags are
+      // ephemeral. initialize only runs on data renders — zoom/resize go
+      // through updateAnnotations, which does NOT reset — so drags still
+      // survive zoom and resize within a render.
+      el._annotationData = {};
 
       // This adds annontations to the legend so they can toggled off/on
       setTimeout(function() {
@@ -334,11 +336,14 @@
       function updateAnnotations() {
         var option = chart.getOption();
         if (!option || !option.grid || option.grid.length === 0) {
-          setTimeout(updateAnnotations, ANNOTATION_UPDATE_DELAY);
+          clearTimeout(el._annoInitTimeout);
+          el._annoInitTimeout = setTimeout(function() {
+            if (el._anno) el._anno.update();
+          }, ANNOTATION_UPDATE_DELAY);
           return;
         }
 
-        self.clearAllSvgLines(svgs);
+        self.clearAllSvgLines(el);
 
         for (var i = 0; i < option.grid.length; i++) {
           var gridModel = chart.getModel().getComponent('grid', i);
@@ -353,6 +358,16 @@
             };
 
             var svg = self.getOrCreateSVG(el, i);
+
+            // Belt-and-braces: empty this grid's group before we redraw,
+            // in case it survived from a previous render.
+            var existingGroup = svg.querySelector('#annotations-group-' + i);
+            if (existingGroup) {
+              while (existingGroup.firstChild) {
+                existingGroup.removeChild(existingGroup.firstChild);
+              }
+            }
+
             svg.style.left = gridRect.x + 'px';
             svg.style.top = gridRect.y + 'px';
             svg.style.width = gridRect.width + 'px';
@@ -500,7 +515,13 @@
         svgs: svgs
       };
 
-      setTimeout(updateAnnotations, ANNOTATION_UPDATE_DELAY);
+      // Cancel any deferred draw left over from a previous render, then
+      // schedule this one through the live el._anno.update pointer so a
+      // stale closure can never redraw old annotations over the new ones.
+      clearTimeout(el._annoInitTimeout);
+      el._annoInitTimeout = setTimeout(function() {
+        if (el._anno) el._anno.update();
+      }, ANNOTATION_UPDATE_DELAY);
 
 // CHART EVENTS — off/on so Shiny re-renders don't stack handlers
       if (el._annoHandlers) {
@@ -508,19 +529,12 @@
         chart.off('timelinechanged', el._annoHandlers.timeline);
         chart.off('restore', el._annoHandlers.restore);
         chart.off('legendselectchanged', el._annoHandlers.legend);
-        chart.off('finished', el._annoHandlers.finished);
       }
 
       el._annoHandlers = {
         zoom: updateAnnotations,
         timeline: updateAnnotations,
         restore: updateAnnotations,
-        finished: function() {
-          clearTimeout(el._annoFinishedTimeout);
-          el._annoFinishedTimeout = setTimeout(function() {
-            if (el._anno) el._anno.update();
-          }, 50);
-        },
         legend: function(params) {
           var clicked = params.name;
           var isOn = params.selected[clicked];
@@ -534,17 +548,17 @@
             updateAnnotations();
           } else {
             // Wait for chart to finish rescaling, then update annotations
-            setTimeout(updateAnnotations, LEGEND_INIT_DELAY);
+            setTimeout(function() {
+              if (el._anno) el._anno.update();
+            }, LEGEND_INIT_DELAY);
           }
         }
-
       };
 
       chart.on('dataZoom', el._annoHandlers.zoom);
       chart.on('timelinechanged', el._annoHandlers.timeline);
       chart.on('restore', el._annoHandlers.restore);
       chart.on('legendselectchanged', el._annoHandlers.legend);
-      chart.on('finished', el._annoHandlers.finished);
 
 // RESIZE — single observer, attached once, delegates through el._anno
       if (!el._annoResizeObserver && typeof ResizeObserver !== 'undefined') {
@@ -552,7 +566,9 @@
           clearTimeout(el._annoResizeTimeout);
           el._annoResizeTimeout = setTimeout(function() {
             var c = echarts.getInstanceByDom(el); // re-fetch, don't close over
-            if (c && el._anno) c.resize();   // repaint → 'finished' → update
+            if (!c || !el._anno) return;
+            c.resize();
+            setTimeout(el._anno.update, DEBOUNCE_DELAY);
           }, RESIZE_DEBOUNCE);
         });
         el._annoResizeObserver.observe(el);
