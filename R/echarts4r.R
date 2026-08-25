@@ -15,15 +15,17 @@ echarts_build <- function(e) {
 #'
 #' Initialise a chart.
 #'
-#' @param data A \code{data.frame}.
+#' @param data A \code{data.frame} or a crosstalk  \code{SharedData} object
 #' @param e An object of class \code{echarts4r} as returned by \code{e_charts}.
 #' @param x Column name containing x axis.
-#' @param draw Whether to draw the chart, intended to be used with \code{\link{e_draw_p}}.
+#' @param draw Whether to draw the chart, intended to be used with
+#'   \code{\link{e_draw_p}}.
 #' @param width,height Must be a valid CSS unit (like \code{'100\%'},
 #'   \code{'400px'}, \code{'auto'}) or a number, which will be coerced to a
 #'   string and have \code{'px'} appended.
 #' @param elementId Id of element.
-#' @param dispose Set to \code{TRUE} to force redraw of chart, set to \code{FALSE} to update.
+#' @param dispose Set to \code{TRUE} to force redraw of chart, set to
+#'   \code{FALSE} to update.
 #' @param renderer Renderer, takes \code{canvas} (default) or \code{svg}.
 #' @param timeline Set to \code{TRUE} to build a timeline, see timeline section.
 #' @param ... Any other argument.
@@ -68,11 +70,35 @@ echarts_build <- function(e) {
 #'   \item{\code{\link{e_line_3d}}}
 #'   \item{\code{\link{e_gauge}}}
 #' }
+#' @section Crosstalk: TO use crosstalk, pass \code{selectedMode = TRUE}) into
+#'   the chart type argument. crosstalk functionality currently supports the
+#'   following chart types (but only cartesion2d):
+#' \itemize{
+#'   \item{\code{\link{e_area}}}
+#'   \item{\code{\link{e_bar}}}
+#'   \item{\code{\link{e_candle}}}
+#'   \item{\code{\link{e_density}}}
+#'   \item{\code{\link{e_effect_scatter}}}
+#'   \item{\code{\link{e_funnel}}}
+#'   \item{\code{\link{e_heatmap}}}
+#'   \item{\code{\link{e_histogram}}}
+#'   \item{\code{\link{e_line}}}
+#'   \item{\code{\link{e_pictorial}}}
+#'   \item{\code{\link{e_pie}}}
+#'   \item{\code{\link{e_scatter}}}
+#'   \item{\code{\link{e_step}}}
+#' }
 #'
 #' @examples
 #' mtcars |>
 #'   e_charts(qsec) |>
 #'   e_line(mpg)
+#'
+#' sd <- crosstalk::SharedData$new(mtcars)
+#' mtcars |>
+#'   e_charts(qsec) |>
+#'   e_line(mpg, selectedMode = TRUE)
+#'
 #' @import htmlwidgets
 #' @importFrom grDevices boxplot.stats
 #' @importFrom grDevices colorRampPalette
@@ -118,6 +144,23 @@ e_charts.default <- function(
     xmap <- deparse(substitute(x))
   }
 
+  # Crosstalk
+  ct_key   <- NULL
+  ct_group <- NULL
+  isGroupedData <- NULL
+  isCrosstalk <- FALSE
+  if (!missing(data) && crosstalk::is.SharedData(data)) {
+    ct_key   <- data$key() |> as.character()
+    ct_group <- data$groupName()
+
+    isCrosstalk = TRUE
+
+    # origData() returns wrong thing on grouped SharedData
+    data <- (data$origData())
+    data$XkeyX <- ct_key  # add key column
+    isGroupedData <- dplyr::is.grouped_df(data)
+  }
+
   # forward options using x
   x <- list(
     theme = "",
@@ -127,6 +170,11 @@ e_charts.default <- function(
     mapping = list(),
     events = list(),
     buttons = list(),
+    # ── 2. Store crosstalk metadata on x so JS + serie functions can read it ─
+    settings = list(
+      crosstalk_key   = ct_key,
+      crosstalk_group = ct_group
+    ),
     opts = list(
       ...,
       yAxis = list(
@@ -144,6 +192,81 @@ e_charts.default <- function(
 
     x$data <- map_grps_(data, timeline)
   }
+
+  # Start crosstalk -------------------------------------------------------
+  # First, I'll acknowledge {echarty} for guidance on how to implement
+  # this. https://github.com/helgasoft/echarty/
+
+  # Crosstalk works by adding a column called 'XkeyX' so each row (i.e. data
+  # point) will have a unique key. e$x$settings contains crosstalk_key and
+  # crosstalk_group - assigned by crosstalk, unless specified.
+  # e$x$crosstalk_grpvar contains name of group (if any)
+
+  # When data is constructed (i.e. in e_line()), each data point will have an
+  # 'XkeyX'. This key is used to identify which data was selected. This gets
+  # matched using this id and datasetId. These values are found:
+
+  # e$x$opts$dataset[[1]]$source[[1]]$XkeyX
+  # e$x$opts$series[[1]]$datasetId
+
+  # This will attach dimensions (i.e. colnames) and e$opts$dataset (i.e.)
+  # js / crosstalk and the js looks for this column to grab
+  if (!is.null(ct_group) & isTRUE(isGroupedData)) {
+
+    flat_data <- dplyr::ungroup(data)
+
+    # Just the name of the group_by variable
+    grp_var   <- if (dplyr::is_grouped_df(data)) dplyr::group_vars(data)[1] else NULL
+
+    source_data <- lapply(seq_len(nrow(flat_data)), function(i) {
+      as.list(flat_data[i, , drop = FALSE])
+    })
+    x$crosstalk_grpvar <- grp_var
+    grp_vals <- as.character(unique(flat_data[[grp_var]]))
+
+    grp_transforms <- lapply(grp_vals, function(g) {
+      list(
+        id = paste0("Xtalk_", g),
+        fromDatasetIndex = 0,
+        transform = list(
+          # filter by group first, then by crosstalk key
+          list(type = "filter", config = list(dimension = grp_var, `=` = g)),
+          list(type = "filter", config = list(dimension = "XkeyX", reg = "^"))
+        )
+      )
+    })
+
+    x$opts$dataset <- c(
+      list(list(id = "source", dimensions = colnames(flat_data), source = source_data)),
+      grp_transforms
+    )
+  }
+
+  # after building x$opts, add the dataset + Xtalk transform
+  if (!is.null(ct_group) & isFALSE(isGroupedData)) {
+    # convert data frame to list of rows
+    source_data <- lapply(seq_len(nrow(data)), function(i) {
+      as.list(data[i, , drop = FALSE])
+    })
+
+    x$opts$dataset <- list(
+      list(
+        id = "source",
+        dimensions = colnames(data),
+        source = source_data
+      ),
+      list(
+        id = "Xtalk",
+        fromDatasetId = "source",
+        transform = list(
+          type = "filter",
+          config = list(dimension = "XkeyX", reg = "^")
+        )
+      )
+    )
+  }
+
+# End crosstalk -----------------------------------------------------------
 
   if (!is.null(xmap)) {
     x$mapping$x <- xmap[1]
@@ -221,6 +344,7 @@ e_charts.default <- function(
     package = "echarts4r",
     elementId = elementId,
     preRenderHook = echarts_build,
+    dependencies = if (!is.null(ct_group)) crosstalk::crosstalkLibs() else NULL,
     sizingPolicy = htmlwidgets::sizingPolicy(
       defaultWidth = "100%",
       knitr.figure = FALSE,
