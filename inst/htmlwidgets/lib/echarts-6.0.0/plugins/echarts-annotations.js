@@ -279,22 +279,13 @@
       el._annotationData = {};
 
       // This adds annontations to the legend so they can toggled off/on
-      setTimeout(function() {
+      function addAnnotationLegendItems() {
         var option = chart.getOption();
-
-        // Get unique annotation legend names
-        var legendItems = {};
+        var legendNames = {};
 
         annotations.forEach(function(ann) {
-          var name = ann.legend_name || 'Annotation';
-          if (!legendItems[name]) {
-            legendItems[name] = {
-              name: name,
-              icon: 'rect',
-              textStyle: { color: '#333' }
-            };
-          }
-        });
+        legendNames[ann.legend_name || 'Annotation'] = true;
+      });
 
         // Add to existing legend data (don't create series)
         if (!option.legend || !option.legend[0]) {
@@ -306,8 +297,13 @@
         }
 
         // Add annotation items to legend
-        Object.keys(legendItems).forEach(function(name) {
-          option.legend[0].data.push(name);
+        Object.keys(legendNames).forEach(function(name) {
+          if (option.legend[0].data.indexOf(name) === -1) {
+            option.legend[0].data.push(name);
+          }
+          if (option.legend[0].selected[name] === undefined) {
+            option.legend[0].selected[name] = true;
+          }
         });
 
         // Initialize selection state
@@ -315,14 +311,16 @@
           option.legend[0].selected = {};
         }
 
-        Object.keys(legendItems).forEach(function(name) {
+        Object.keys(legendNames).forEach(function(name) {
           if (option.legend[0].selected[name] === undefined) {
             option.legend[0].selected[name] = true;
           }
         });
 
         chart.setOption(option);
-      }, LEGEND_INIT_DELAY);
+      }
+
+      setTimeout(addAnnotationLegendItems, LEGEND_INIT_DELAY);
 
 
       // Initialize visibility tracking
@@ -527,6 +525,7 @@
       if (el._annoHandlers) {
         chart.off('dataZoom', el._annoHandlers.zoom);
         chart.off('timelinechanged', el._annoHandlers.timeline);
+
         chart.off('restore', el._annoHandlers.restore);
         chart.off('legendselectchanged', el._annoHandlers.legend);
       }
@@ -534,7 +533,15 @@
       el._annoHandlers = {
         zoom: updateAnnotations,
         timeline: updateAnnotations,
-        restore: updateAnnotations,
+        restore: function() {
+          Object.keys(annotationVisibility).forEach(function(name) {
+      annotationVisibility[name] = true;
+    });
+          addAnnotationLegendItems();
+          // give setOption a tick before recalculating pixel positions,
+          // since restore also resets grid layout
+          setTimeout(updateAnnotations, LEGEND_INIT_DELAY);
+        },
         legend: function(params) {
           var clicked = params.name;
           var isOn = params.selected[clicked];
